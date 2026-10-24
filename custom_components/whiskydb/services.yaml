@@ -1,401 +1,384 @@
 add_rack:
-  name: Regal hinzufügen
-  description: Fügt ein Lagerregal innerhalb einer Sammlung hinzu.
+  name: "Add rack"
+  description: "Adds a storage rack within a collection."
   fields:
     cellar_id:
-      description: "ID der Sammlung (optional, Standard: die erste)"
+      description: "ID of the collection (optional, defaults to the first)"
     name:
-      description: Name des Regals
-      example: "Vitrine Wohnzimmer"
+      description: "Rack name"
+      example: "Living room display cabinet"
     columns:
-      description: Anzahl der Spalten
-      example: 6
+      description: "Number of columns"
+      example: "6"
     shelves:
-      description: Anzahl der Regalböden
-      example: 3
+      description: "Number of shelves"
+      example: "3"
     levels:
-      description: "Übereinanderliegende Ebenen (1 bis 4)"
-      example: 1
+      description: "Stacked levels (1 to 4)"
+      example: "1"
 
 update_rack:
-  name: Regal bearbeiten
-  description: Bearbeitet ein vorhandenes Regal.
+  name: "Edit rack"
+  description: "Edits an existing rack."
   fields:
     rack_id:
-      description: ID des Regals
+      description: "Rack ID"
       required: true
     name:
-      description: Neuer Name
+      description: "New name"
     columns:
-      description: Anzahl der Spalten
+      description: "Number of columns"
     shelves:
-      description: Anzahl der Regalböden
+      description: "Number of shelves"
     levels:
-      description: Übereinanderliegende Ebenen (1 bis 4)
+      description: "Stacked levels (1 to 4)"
 
 remove_rack:
-  name: Regal löschen
-  description: Löscht ein Regal. Flaschen darin verlieren ihren Lagerplatz, bleiben aber in der Sammlung.
+  name: "Delete rack"
+  description: "Deletes a rack. Bottles in it lose their storage location but stay in the collection."
   fields:
     rack_id:
-      description: ID des Regals
+      description: "Rack ID"
       required: true
 
 add_cellar:
-  name: Sammlung hinzufügen
-  description: Legt eine neue, leere Sammlung (Schrank) in der Instanz an.
+  name: "Add collection"
+  description: "Creates a new, empty collection (cabinet) in the instance."
   fields:
     name:
-      description: Name der Sammlung
-      example: "Sammlung Büro"
+      description: "Collection name"
+      example: "Office collection"
 
 rename_cellar:
-  name: Sammlung umbenennen
-  description: Benennt eine Sammlung um (die erste, wenn cellar_id weggelassen wird).
+  name: "Rename collection"
+  description: "Renames a collection (the first one if cellar_id is omitted)."
   fields:
     cellar_id:
-      description: ID der Sammlung (optional)
+      description: "ID of the collection (optional)"
     name:
-      description: Neuer Name
+      description: "New name"
       required: true
 
 remove_cellar:
-  name: Sammlung löschen
-  description: Löscht eine leere Sammlung (wird abgelehnt, wenn sie Regale enthält oder die letzte ist).
+  name: "Delete collection"
+  description: "Deletes an empty collection (rejected if it contains racks or is the last one)."
   fields:
     cellar_id:
-      description: ID der Sammlung
+      description: "ID of the collection"
       required: true
 
 add_whisky:
-  name: Whisky hinzufügen
-  description: Fügt einen Whisky-Eintrag zur Sammlung hinzu, optional mit erstem Lagerplatz.
+  name: "Add whisky"
+  description: "Adds a whisky record to the collection, optionally with its first storage slot."
   fields:
     name:
-      description: Name des Eintrags (z. B. "Lagavulin 16 Years Old")
+      description: "Record name (e.g. \"Lagavulin 16 Years Old\")"
       required: true
       example: "Lagavulin 16 Years Old"
     rack_id:
-      description: ID des Zielregals (optional — ohne Regal werden `quantity` Exemplare ohne Lagerplatz angelegt)
+      description: "ID of the target rack (optional — without a rack, `quantity` bottles are created without a storage location)"
     slot:
-      description: Platznummer im Regal (nur wenn rack_id angegeben ist)
-      example: 0
+      description: "Slot number in the rack (only if rack_id is given)"
+      example: "0"
     quantity:
-      description: Anzahl anzulegender Exemplare, wenn rack_id weggelassen wird (Standard 1)
-      example: 1
+      description: "Number of bottles to create when rack_id is omitted (default 1)"
+      example: "1"
     initial_status:
-      description: "Initialer Status der angelegten Exemplare: sealed, opened oder finished (Standard sealed)"
+      description: "Initial status of the created bottles: sealed, opened or finished (default sealed)"
       example: "sealed"
     distillery:
-      description: Destillerie
+      description: "Distillery"
       example: "Lagavulin"
     bottler:
-      description: Unabhängiger Abfüller (falls von der Destillerie abweichend)
+      description: "Independent bottler (if different from the distillery)"
     brand:
-      description: Handelsmarke
+      description: "Commercial brand"
     expression:
-      description: 'Expression / Abfüllung (z. B. "16 Year Old")'
+      description: "Expression / bottling (e.g. \"16 Year Old\")"
     country:
-      description: Land
-      example: "Schottland"
+      description: "Country"
+      example: "Scotland"
     region:
-      description: Region
+      description: "Region"
       example: "Islay"
     distillery_location:
-      description: Genaue Lage der Destillerie
+      description: "Exact location of the distillery"
     whisky_type:
-      description: "Typ: Single Malt, Blended Malt, Blended Whisky, Single Grain, Bourbon, Rye, Tennessee Whiskey, Corn Whiskey, Irish Single Malt, Irish Pot Still, Japanese Whisky, World Whisky, Sonstige"
+      description: "Type: Single Malt, Blended Malt, Blended Whisky, Single Grain, Bourbon, Rye, Tennessee Whiskey, Corn Whiskey, Irish Single Malt, Irish Pot Still, Japanese Whisky, World Whisky, Other"
       example: "Single Malt"
     age:
-      description: Alter (Jahre)
+      description: "Age (years)"
       example: "16"
     vintage:
-      description: Destillationsjahr
+      description: "Distillation year"
     bottling_year:
-      description: Abfülljahr
+      description: "Bottling year"
     abv:
-      description: Alkoholgehalt (% vol)
-      example: 43
+      description: "Alcohol by volume (%)"
+      example: "43"
     volume_ml:
-      description: Volumen in Millilitern
-      example: 700
+      description: "Volume in millilitres"
+      example: "700"
     chill_filtered:
-      description: Nicht kühlgefiltert = false
+      description: "Not chill-filtered = false"
     natural_colour:
-      description: Natürliche Farbe (ungefärbt) = true
+      description: "Natural colour (uncoloured) = true"
     peated:
-      description: Torfig
+      description: "Peated"
     peat_level:
-      description: "Torfigkeit (z. B. leicht, mittel, stark)"
+      description: "Peat level (e.g. light, medium, strong)"
     ppm:
-      description: Phenolgehalt in ppm (falls bekannt)
+      description: "Phenol content in ppm (if known)"
     maturation:
-      description: Zusammenfassung der Reifung
+      description: "Summary of the maturation"
     cask_type:
-      description: "Fasstyp (z. B. First Fill Bourbon, Oloroso, PX …)"
+      description: "Cask type (e.g. First Fill Bourbon, Oloroso, PX …)"
     cask_number:
-      description: Fassnummer
+      description: "Cask number"
     finish:
-      description: Finish (Fassfinish)
+      description: "Finish"
     maturation_years:
-      description: Reifedauer in Jahren
+      description: "Maturation period in years"
     batch:
-      description: Chargennummer
+      description: "Batch number"
     edition:
-      description: Edition
+      description: "Edition"
     bottle_number:
-      description: Flaschennummer (limitierte Edition)
+      description: "Bottle number (limited edition)"
     number_of_bottles:
-      description: Gesamtzahl der produzierten Flaschen
+      description: "Total number of bottles produced"
     limited_edition:
-      description: Limitierte Edition
+      description: "Limited edition"
     independent_bottler:
-      description: Unabhängige Abfüllung (außerhalb der Ursprungs-Destillerie)
+      description: "Independent bottling (outside the original distillery)"
     tasting_notes:
-      description: Allgemeine Verkostungsnotizen
+      description: "General tasting notes"
     nose_notes:
-      description: Nase
+      description: "Nose"
     palate_notes:
-      description: Gaumen
+      description: "Palate"
     finish_notes:
-      description: Abgang
+      description: "Finish"
     whiskybase_id:
-      description: Whiskybase-ID (optional, wird nie automatisch abgefragt)
+      description: "Whiskybase ID (optional, never queried automatically)"
     whiskybase_url:
-      description: Whiskybase-Link (optional, wird nie automatisch abgefragt)
+      description: "Whiskybase link (optional, never queried automatically)"
     image_url:
-      description: URL des Fotos
+      description: "Photo URL"
     label_image_url:
-      description: URL des Etikettfotos
+      description: "Label photo URL"
     price:
-      description: Kaufpreis
+      description: "Purchase price"
     current_value:
-      description: Aktueller geschätzter Wert
+      description: "Current estimated value"
     currency:
-      description: Währung (Standard EUR)
+      description: "Currency (default EUR)"
     purchase_date:
-      description: Kaufdatum (JJJJ-MM-TT)
+      description: "Purchase date (YYYY-MM-DD)"
     purchase_location:
-      description: Kaufort
+      description: "Place of purchase"
     storage_location:
-      description: Freitext-Lagerort (zusätzlich zur Regalplatzierung)
+      description: "Free-text storage location (in addition to the rack slot)"
     notes:
-      description: Persönliche Notizen
+      description: "Personal notes"
     favorite:
-      description: Liebling
+      description: "Favourite"
     rating:
-      description: Persönliche Bewertung /5
+      description: "Personal rating /5"
     barcode:
-      description: Strichcode
+      description: "Barcode"
     external_id:
-      description: Externe ID (andere Datenbank)
+      description: "External ID (other database)"
     external_url:
-      description: Externer Link
+      description: "External link"
 
 update_whisky:
-  name: Whisky bearbeiten
-  description: Bearbeitet die Informationen eines vorhandenen Whisky-Eintrags (gleiche Felder wie add_whisky, ohne Lagerplatz).
+  name: "Edit whisky"
+  description: "Edits the information of an existing whisky record (same fields as add_whisky, without storage slot)."
   fields:
     whisky_id:
-      description: ID des Whiskys
+      description: "Whisky ID"
       required: true
     name:
-      description: Neuer Name
+      description: "New name"
     distillery:
-      description: Destillerie
+      description: "Distillery"
     bottler:
-      description: Unabhängiger Abfüller
+      description: "Independent bottler"
     brand:
-      description: Handelsmarke
+      description: "Commercial brand"
     expression:
-      description: Expression / Abfüllung
+      description: "Expression / bottling"
     country:
-      description: Land
+      description: "Country"
     region:
-      description: Region
+      description: "Region"
     whisky_type:
-      description: Whisky-Typ
+      description: "Whisky type"
     age:
-      description: Alter
+      description: "Age"
     abv:
-      description: Alkoholgehalt
+      description: "Alcohol by volume"
     cask_type:
-      description: Fasstyp
+      description: "Cask type"
     finish:
-      description: Finish
+      description: "Finish"
     tasting_notes:
-      description: Verkostungsnotizen
+      description: "Tasting notes"
     price:
-      description: Kaufpreis
+      description: "Purchase price"
     current_value:
-      description: Aktueller geschätzter Wert
+      description: "Current estimated value"
     favorite:
-      description: Liebling
+      description: "Favourite"
     rating:
-      description: Persönliche Bewertung /5
+      description: "Personal rating /5"
 
 remove_whisky:
-  name: Whisky entfernen
-  description: Entfernt einen Whisky-Eintrag mit ALLEN seinen Exemplaren aus der Sammlung.
+  name: "Remove whisky"
+  description: "Removes a whisky record and ALL of its bottles from the collection."
   fields:
     whisky_id:
-      description: ID des Whiskys
+      description: "Whisky ID"
       required: true
 
 add_slot:
-  name: Exemplar hinzufügen
-  description: Fügt einem vorhandenen Whisky eine weitere physische Flasche hinzu.
+  name: "Add bottle"
+  description: "Adds another physical bottle to an existing whisky."
   fields:
     whisky_id:
-      description: ID des Whiskys
+      description: "Whisky ID"
       required: true
     rack_id:
-      description: ID des Regals
+      description: "Rack ID"
     slot:
-      description: Platznummer
+      description: "Slot number"
     comment:
-      description: Freier Kommentar zu diesem Exemplar
+      description: "Free comment for this bottle"
     size:
-      description: Flaschenformat
+      description: "Bottle format"
 
 update_slot:
-  name: Exemplar bearbeiten
-  description: Ändert Format oder Kommentar einer physischen Flasche.
+  name: "Edit bottle"
+  description: "Changes format or comment of a physical bottle."
   fields:
     whisky_id:
-      description: ID des Whiskys
+      description: "Whisky ID"
       required: true
     slot_idx:
-      description: Index des Exemplars in der Liste der Lagerplätze
+      description: "Index of the bottle in the list of storage slots"
       required: true
     size:
-      description: Flaschenformat
+      description: "Bottle format"
     comment:
-      description: Freier Kommentar
+      description: "Free comment"
 
 move_slot:
-  name: Exemplar verschieben
-  description: Verschiebt eine physische Flasche in ein anderes Regal / an einen anderen Platz.
+  name: "Move bottle"
+  description: "Moves a physical bottle to another rack / slot."
   fields:
     whisky_id:
-      description: ID des Whiskys
+      description: "Whisky ID"
       required: true
     slot_idx:
-      description: Index des zu verschiebenden Exemplars
+      description: "Index of the bottle to move"
       required: true
     rack_id:
-      description: ID des Zielregals
+      description: "ID of the target rack"
       required: true
     slot:
-      description: Ziel-Platznummer
+      description: "Target slot number"
       required: true
 
 remove_slot:
-  name: Exemplar entfernen
-  description: >-
-    Entfernt EIN Exemplar, ohne seinen Status zu ändern (kein Verbrauchs-Service —
-    dafür open_bottle/finish_bottle nutzen). Der Whisky wird automatisch
-    mitgelöscht, wenn es sein letztes Exemplar war.
+  name: "Remove bottle"
+  description: "Removes ONE bottle without changing its status (not a consumption service — use open_bottle/finish_bottle for that). The whisky is deleted along with it automatically if this was its last bottle."
   fields:
     whisky_id:
-      description: ID des Whiskys
+      description: "Whisky ID"
       required: true
     slot_idx:
-      description: Index des zu entfernenden Exemplars
+      description: "Index of the bottle to remove"
       required: true
 
 open_bottle:
-  name: Flasche öffnen
-  description: Markiert ein Exemplar als geöffnet (sealed → opened). Löst das Ereignis whiskydb_bottle_opened aus.
+  name: "Open bottle"
+  description: "Marks a bottle as opened (sealed → opened). Fires the whiskydb_bottle_opened event."
   fields:
     whisky_id:
-      description: ID des Whiskys
+      description: "Whisky ID"
       required: true
     slot_idx:
-      description: Index des Exemplars (Standard 0)
-      example: 0
+      description: "Index of the bottle (default 0)"
+      example: "0"
     opened_date:
-      description: Öffnungsdatum (JJJJ-MM-TT, Standard heute)
+      description: "Opening date (YYYY-MM-DD, default today)"
 
 finish_bottle:
-  name: Flasche leeren
-  description: >-
-    Markiert ein Exemplar als leer (opened → finished). Der Lagerplatz wird
-    NICHT gelöscht: Der Eintrag bleibt mit seinem Verlauf einsehbar.
-    Löst das Ereignis whiskydb_bottle_finished aus.
+  name: "Finish bottle"
+  description: "Marks a bottle as finished (opened → finished). The storage slot is NOT deleted: the record stays viewable with its history. Fires the whiskydb_bottle_finished event."
   fields:
     whisky_id:
-      description: ID des Whiskys
+      description: "Whisky ID"
       required: true
     slot_idx:
-      description: Index des Exemplars (Standard 0)
-      example: 0
+      description: "Index of the bottle (default 0)"
+      example: "0"
     finished_date:
-      description: Endedatum (JJJJ-MM-TT, Standard heute)
+      description: "End date (YYYY-MM-DD, default today)"
     rating:
-      description: Persönliche Bewertung /5 für diesen Whisky
+      description: "Personal rating /5 for this whisky"
     comment:
-      description: Verkostungskommentar für dieses Exemplar
+      description: "Tasting comment for this bottle"
 
 update_remaining:
-  name: Füllstand aktualisieren
-  description: >-
-    Aktualisiert den Füllstand (%) eines GEÖFFNETEN Exemplars (manuelle
-    Verfolgung, z. B. Wiegen oder Sichtschätzung). Löst das Ereignis
-    whiskydb_bottle_low NUR beim erstmaligen Unterschreiten des Schwellwerts
-    aus (nicht bei jedem Aufruf) und ist direkt als Automatisierungs-Trigger
-    nutzbar.
+  name: "Update fill level"
+  description: "Updates the fill level (%) of an OPENED bottle (manual tracking, e.g. weighing or visual estimation). Fires the whiskydb_bottle_low event ONLY when the threshold is crossed for the first time (not on every call) and can be used directly as an automation trigger."
   fields:
     whisky_id:
-      description: ID des Whiskys
+      description: "Whisky ID"
       required: true
     slot_idx:
-      description: Index des Exemplars (Standard 0)
-      example: 0
+      description: "Index of the bottle (default 0)"
+      example: "0"
     remaining_percent:
-      description: Füllstand, 0 bis 100
+      description: "Fill level, 0 to 100"
       required: true
-      example: 35
+      example: "35"
     low_threshold:
-      description: Schwellwert, dessen Unterschreiten whiskydb_bottle_low auslöst (Standard 20)
-      example: 20
+      description: "Threshold below which whiskydb_bottle_low fires (default 20)"
+      example: "20"
 
 add_tasting:
-  name: Verkostung hinzufügen (ohne Sammlung)
-  description: >-
-    Fügt einen Eintrag ins Verkostungstagebuch für einen nur PROBIERTEN Whisky
-    (bei Freunden, in der Bar, auf einer Verkostung), ohne je eine Flasche
-    besessen zu haben. Hat KEINEN Einfluss auf die Sammlung (Whiskies, Regale,
-    Sensoren): Diese Einträge leben in einer separaten Liste und erscheinen
-    in der Karte im Tab "🥂 Getrunkene" zusammen mit den geleerten Flaschen.
-    Löst das Ereignis whiskydb_tasting_added aus.
+  name: "Add tasting (outside the collection)"
+  description: "Adds an entry to the tasting diary for a whisky you only TASTED (at friends', in a bar, at a tasting) without ever owning a bottle. Has NO effect on the collection (whiskies, racks, sensors): these entries live in a separate list and appear in the card's \"🥂\" tab together with the finished bottles. Fires the whiskydb_tasting_added event."
   fields:
     name:
-      description: Name des verkosteten Whiskys
+      description: "Name of the tasted whisky"
       required: true
       example: "Talisker 18 Years Old"
     distillery:
-      description: Destillerie
+      description: "Distillery"
     whisky_type:
-      description: "Typ: Single Malt, Blended Malt, Blended Whisky, Single Grain, Bourbon, Rye, Tennessee Whiskey, Corn Whiskey, Irish Single Malt, Irish Pot Still, Japanese Whisky, World Whisky, Sonstige"
+      description: "Type: Single Malt, Blended Malt, Blended Whisky, Single Grain, Bourbon, Rye, Tennessee Whiskey, Corn Whiskey, Irish Single Malt, Irish Pot Still, Japanese Whisky, World Whisky, Other"
     region:
-      description: Region
+      description: "Region"
     country:
-      description: Land
+      description: "Country"
     place:
-      description: 'Ort der Verkostung (z. B. "Bei Marc", "Bar Le Malt")'
-      example: "Bei Marc"
+      description: "Place of tasting (e.g. \"At Marc's\", \"Le Malt bar\")"
+      example: "At Marc's"
     tasted_date:
-      description: Verkostungsdatum (JJJJ-MM-TT, Standard heute)
+      description: "Tasting date (YYYY-MM-DD, default today)"
     rating:
-      description: Persönliche Bewertung /5
+      description: "Personal rating /5"
     comment:
-      description: Verkostungskommentar
+      description: "Tasting comment"
 
 remove_tasting:
-  name: Verkostung löschen (ohne Sammlung)
-  description: Löscht einen Eintrag aus dem Verkostungstagebuch.
+  name: "Delete tasting (outside the collection)"
+  description: "Deletes an entry from the tasting diary."
   fields:
     tasting_id:
-      description: ID des Verkostungseintrags
+      description: "ID of the tasting entry"
       required: true

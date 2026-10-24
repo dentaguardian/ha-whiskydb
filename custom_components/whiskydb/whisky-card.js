@@ -1,24 +1,19 @@
-// Whisky — Carte Lovelace
-// Projet indépendant dérivé de Millésime (github.com/Redsklns/ha-millesime,
-// licence MIT) : même style d'architecture (Web Component vanilla, Shadow
-// DOM, rendu par template strings), vocabulaire entièrement whisky.
+// WhiskyDB — Lovelace card
+// Independent project derived from Millésime (github.com/Redsklns/ha-millesime,
+// MIT license): same architectural style (vanilla Web Component, Shadow DOM,
+// template-string rendering), whisky-only vocabulary. Multilingual UI (12
+// languages); AI label recognition goes to any OpenAI-compatible endpoint
+// (default: Mistral) instead of Gemini.
 //
-// Commit 12/12 : packaging final — VERSION 1.0.0, socle v1 complet. Pas de
-// changement fonctionnel côté carte depuis le commit 9 (suivi du niveau
-// restant) ; le commit 8 avait ajouté le panneau de statistiques et la barre
-// de recherche/filtres ; le commit 7, la liste (tuiles) et la fiche détail ;
-// le commit 6, le formulaire d'ajout/édition et la reconnaissance photo
-// Gemini.
-//
-// Les fonctions PURES (sans DOM) sont exportées en fin de fichier pour être
-// testées avec Node (voir tests/), sans dépendre d'un navigateur ou de HA.
+// The pure functions (DOM-free) are exported at the end of the file so they
+// can be tested with Node (see tests/), without a browser or HA.
 
 const DOMAIN = "whiskydb";
 const VERSION = "1.3.0";
 
-// ── i18n: mehrsprachige Oberfläche (Quellsprache Deutsch) ──
-// Sprachwörterbücher: deutscher Quell-String -> Übersetzung.
-// Fallback-Kette in tr(): Sprache -> Englisch -> Deutsch (Quelle).
+// ── i18n: multilingual UI (German source strings) ──
+// Language dictionaries: German source string -> translation.
+// Fallback chain in tr(): language -> English -> German (source).
 const CARD_I18N = {
 "en": {
   "% verbleibend": "% remaining",
@@ -2191,14 +2186,14 @@ const CARD_I18N = {
 
 let CARD_LANG = "de";
 
-// Normalisiert HA-Sprach-Tags ("pt-br" -> "pt-BR", "zh" -> "zh-Hans", ...).
+// Normalizes HA language tags ("pt-br" -> "pt-BR", "zh" -> "zh-Hans", ...).
 function _cardNormalizeLang(tag) {
   if (!tag) return "";
   const t = String(tag).toLowerCase().replace(/_/g, "-");
   return {"pt-br": "pt-BR", "zh-cn": "zh-Hans", "zh-sg": "zh-Hans", "zh-my": "zh-Hans", "zh": "zh-Hans", "zh-tw": "zh-Hant", "zh-hk": "zh-Hant", "zh-mo": "zh-Hant", "zh-hans": "zh-Hans", "zh-hant": "zh-Hant", "es-419": "es", "es-mx": "es", "es-ar": "es", "es-co": "es", "es-cl": "es", "en-us": "en", "en-gb": "en", "en-au": "en", "en-ca": "en", "de-at": "de", "de-ch": "de", "de-lu": "de", "fr-ca": "fr", "fr-be": "fr", "fr-ch": "fr", "nl-be": "nl", "it-ch": "it", "pt-pt": "pt-BR", "pt": "pt-BR"}[t] || t;
 }
 
-// Wählt die Kartensprache: config.language überschreibt, sonst HA-Sprache.
+// Picks the card language: config.language overrides, otherwise the HA language.
 function _cardResolveLang(hass, config) {
   const override = config && config.language && String(config.language).toLowerCase() !== "auto"
     ? _cardNormalizeLang(config.language) : "";
@@ -2213,7 +2208,7 @@ function _cardResolveLang(hass, config) {
   return "en";
 }
 
-// Übersetzt einen deutschen Quell-String in die aktuelle Kartensprache.
+// Translates a German source string into the current card language.
 function tr(s) {
   if (CARD_LANG === "de") return s;
   const d = CARD_I18N[CARD_LANG];
@@ -2223,10 +2218,10 @@ function tr(s) {
   return s;
 }
 
-// ── Ende i18n ──
+// ── end of i18n ──
 
 
-// Doit rester synchronisé avec WHISKY_TYPE_VALUES dans __init__.py.
+// Must stay in sync with WHISKY_TYPE_VALUES in __init__.py.
 const WHISKY_TYPE_VALUES = [
   "Single Malt", "Blended Malt", "Blended Whisky", "Single Grain",
   "Bourbon", "Rye", "Tennessee Whiskey", "Corn Whiskey",
@@ -2234,7 +2229,7 @@ const WHISKY_TYPE_VALUES = [
   "World Whisky", "Other",
 ];
 
-// Doit rester synchronisé avec CASK_TYPE_SUGGESTIONS dans __init__.py.
+// Must stay in sync with CASK_TYPE_SUGGESTIONS in __init__.py.
 const CASK_TYPE_SUGGESTIONS = [
   "Bourbon", "First Fill Bourbon", "Refill Bourbon", "Sherry", "Oloroso",
   "PX", "Port", "Madeira", "Wine", "Virgin Oak", "Mizunara",
@@ -2254,7 +2249,7 @@ const ERROR_MESSAGES = {
   parse_error: tr("Antwort der KI nicht lesbar — bitte erneut versuchen."),
 };
 
-// ── Champs du formulaire, groupés par section (brief §2 et §6) ──────────────
+// ── Form fields, grouped by section ─────────────────────────────────────────
 // type: "text" | "number" | "tri" | "select" | "textarea" | "checkbox"
 const FORM_SECTIONS = [
   {
@@ -2359,8 +2354,8 @@ const FORM_SECTIONS = [
   },
 ];
 
-// Champs uniquement présents à la CRÉATION (pas de sens en édition, où l'état
-// physique se gère bouteille par bouteille depuis la fiche détail — commit 7).
+// Fields only present on CREATION (meaningless when editing, where the
+// physical state is managed bottle by bottle from the detail view).
 const CREATE_ONLY_SECTION = {
   title: tr("📥 Beim Anlegen"), key: "creation",
   fields: [
@@ -2369,11 +2364,11 @@ const CREATE_ONLY_SECTION = {
   ],
 };
 
-// ── Fonctions pures (testables sans DOM — voir export en fin de fichier) ────
+// ── Pure functions (testable without DOM — see the export at the end) ─────
 
 function triStateToPayload(value) {
-  // "" (non renseigné) -> undefined : le champ n'est PAS envoyé, la valeur
-  // par défaut (null côté backend) reste en place. "true"/"false" -> booléen.
+  // "" (not filled in) -> undefined: the field is NOT sent, the backend
+  // default (null) stays in place. "true"/"false" -> boolean.
   if (value === "true") return true;
   if (value === "false") return false;
   return undefined;
@@ -2395,12 +2390,11 @@ const TRI_FIELDS = new Set(["chill_filtered", "natural_colour", "peated", "limit
 const NUMBER_FIELDS = new Set(["abv", "volume_ml", "ppm", "price", "current_value", "rating", "quantity"]);
 
 /**
- * Construit le payload d'appel de service (add_whisky / update_whisky) à
- * partir des valeurs BRUTES du formulaire (toutes des chaînes, comme le
- * rendrait une lecture de <input>.value). Ne renvoie QUE les champs
- * effectivement renseignés : un champ vide n'écrase jamais une valeur
- * existante côté backend (voir svc_update_whisky, qui ne touche que les
- * clés présentes dans call.data).
+ * Builds the service-call payload (add_whisky / update_whisky) from the
+ * RAW form values (all strings, as an <input>.value read would return).
+ * Only returns the fields actually filled in: an empty field never
+ * overwrites an existing backend value (see svc_update_whisky, which
+ * only touches the keys present in call.data).
  */
 function buildWhiskyPayload(raw) {
   const payload = {};
@@ -2434,9 +2428,9 @@ function confidenceTier(score) {
 }
 
 /**
- * Liste des champs exploitables d'un résultat de reconnaissance (non null),
- * avec leur confiance — sert à construire l'écran de validation (brief §3 :
- * toujours présenter à l'utilisateur avant tout enregistrement).
+ * Lists the usable fields of a recognition result (non null), with their
+ * confidence — used to build the validation screen (always show the user
+ * before saving anything).
  */
 function recognitionFieldList(result) {
   if (!result) return [];
@@ -2448,9 +2442,9 @@ function recognitionFieldList(result) {
 }
 
 /**
- * Applique les champs SÉLECTIONNÉS d'un résultat de reconnaissance à un jeu
- * de valeurs de formulaire existant, SANS jamais écraser un champ déjà
- * rempli par l'utilisateur sauf si explicitement sélectionné.
+ * Applies the SELECTED fields of a recognition result to an existing set of
+ * form values, WITHOUT ever overwriting a field the user already filled in
+ * unless it is explicitly selected.
  */
 function applyRecognitionSelection(currentValues, result, selectedKeys) {
   const next = { ...currentValues };
@@ -2462,7 +2456,7 @@ function applyRecognitionSelection(currentValues, result, selectedKeys) {
   return next;
 }
 
-// ── Fonctions pures : liste & fiche détail (commit 7) ───────────────────────
+// ── Pure functions: list & detail view ──────────────────────────────────────
 
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => (
@@ -2473,7 +2467,7 @@ function escapeHtml(s) {
 const STATUS_ORDER = ["sealed", "opened", "finished"];
 const STATUS_DOT = { sealed: "●", opened: "◐", finished: "○" };
 
-/** {sealed: n, opened: n, finished: n} à partir des emplacements d'une fiche. */
+/** {sealed: n, opened: n, finished: n} from a record's slots. */
 function statusBreakdown(slots) {
   const counts = { sealed: 0, opened: 0, finished: 0 };
   for (const s of slots || []) {
@@ -2483,7 +2477,7 @@ function statusBreakdown(slots) {
   return counts;
 }
 
-/** Résumé court des statuts pour l'affichage tuile, ex. "2 scellées · 1 ouverte". */
+/** Short status summary for tile display, e.g. "2 sealed · 1 opened". */
 function statusSummary(slots) {
   const counts = statusBreakdown(slots);
   const labels = { sealed: tr("versiegelt"), opened: tr("geöffnet"), finished: tr("leer") };
@@ -2492,7 +2486,7 @@ function statusSummary(slots) {
     .join(" · ") || tr("keine Flasche");
 }
 
-/** "★★★★☆" pour une note 0-5 (arrondie à l'entier le plus proche pour l'affichage). */
+/** "★★★★☆" for a 0-5 rating (rounded to the nearest integer for display). */
 function ratingStars(rating) {
   const n = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
   return "★".repeat(n) + "☆".repeat(5 - n);
@@ -2525,11 +2519,11 @@ function tileHTML(w) {
 }
 
 /**
- * Aplatit tous les exemplaires TERMINÉS de la collection en une liste plate
- * {whisky, slot, slotIdx}, triée par date de fin décroissante (les exemplaires
- * sans date connue sont relégués en fin de liste). Alimente l'onglet
- * "🥂 Whisky bu" — un journal des bouteilles terminées, distinct de la vue
- * "Collection" qui mélange tous les statuts.
+ * Flattens all FINISHED bottles of the collection into a flat list
+ * {whisky, slot, slotIdx}, sorted by descending finish date (entries
+ * without a known date go last). Feeds the "🥂 Getrunkene" tab — a journal
+ * of finished bottles, distinct from the "Collection" view which mixes
+ * all statuses.
  */
 function finishedEntries(whiskies) {
   const out = [];
@@ -2583,11 +2577,11 @@ function tastingRowHTML(t) {
 }
 
 /**
- * Fusionne, pour l'onglet "🥂 Whisky bu", les bouteilles TERMINÉES de la
- * collection (`finishedEntries`) et les dégustations hors collection
- * (`tasting_log` — whiskies simplement goûtés, jamais possédés), triées
- * ensemble du plus récent au plus ancien. Chaque entrée porte un
- * discriminant `kind` ("finished" | "tasting") pour choisir le bon rendu.
+ * Merges, for the "🥂 Getrunkene" tab, the collection's FINISHED bottles
+ * (`finishedEntries`) and the off-collection tastings (`tasting_log` —
+ * whiskies merely tasted, never owned), sorted together from newest to
+ * oldest. Each entry carries a `kind` discriminant ("finished" |
+ * "tasting") to pick the right rendering.
  */
 function mergedTastingEntries(whiskies, tastingLog) {
   const finished = finishedEntries(whiskies).map((e) => ({ kind: "finished", date: e.slot.finished_date || "", entry: e }));
@@ -2595,12 +2589,12 @@ function mergedTastingEntries(whiskies, tastingLog) {
   return [...finished, ...tastings].sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 
-/** Regroupe les champs whisky_meta en lignes label/valeur par section détail (commit 6/7 partagent FORM_SECTIONS). */
+/** Groups whisky_meta fields into label/value rows per detail section (FORM_SECTIONS is shared). */
 function detailRows(w) {
   const meta = w.whisky_meta || {};
   const get = (k) => (k in w ? w[k] : meta[k]);
   return FORM_SECTIONS
-    .filter((s) => s.key !== "tasting")  // la dégustation a sa propre mise en page (texte long)
+    .filter((s) => s.key !== "tasting")  // tastings have their own layout (long text)
     .map((s) => ({
       title: s.title,
       rows: s.fields
@@ -2615,9 +2609,9 @@ function detailRows(w) {
     .filter((s) => s.rows.length > 0);
 }
 
-// ── Fonctions pures : recherche, filtres & statistiques (commit 8) ─────────
+// ── Pure functions: search, filters & statistics ─────────────────────────────
 
-/** Vrai si le texte libre `q` correspond à un champ identitaire de la fiche. */
+/** True if the free text `q` matches an identity field of the record. */
 function matchesQuery(w, q) {
   const needle = String(q || "").trim().toLowerCase();
   if (!needle) return true;
@@ -2629,16 +2623,16 @@ function matchesQuery(w, q) {
   return haystack.includes(needle);
 }
 
-/** Vrai si la fiche possède au moins un exemplaire dans le statut demandé (ou si aucun statut n'est demandé). */
+/** True if the record has at least one bottle in the requested status (or if no status is requested). */
 function matchesStatusFilter(w, status) {
   if (!status) return true;
   return (w.slots || []).some((s) => (s.bottle_status || "sealed") === status);
 }
 
 /**
- * Filtre la liste des fiches whisky selon {q, whisky_type, status, favorite}.
- * Filtre purement côté client (les données sont déjà toutes chargées en
- * mémoire via whisky/get_data) — aucun filtre non renseigné n'exclut rien.
+ * Filters the whisky record list by {q, whisky_type, status, favorite}.
+ * Purely client-side filtering (all data is already loaded in memory via
+ * whisky/get_data) — an unset filter never excludes anything.
  */
 function filterWhiskies(whiskies, filters) {
   const f = filters || {};
@@ -2651,7 +2645,7 @@ function filterWhiskies(whiskies, filters) {
   });
 }
 
-/** Répartition {clé -> nombre de bouteilles} triée par fréquence décroissante (miroir de sensor.py _breakdown). */
+/** Breakdown {key -> bottle count} sorted by descending frequency (mirror of sensor.py _breakdown). */
 function breakdownJS(whiskies, keyFn) {
   const counts = {};
   for (const w of whiskies || []) {
@@ -2664,10 +2658,10 @@ function breakdownJS(whiskies, keyFn) {
 }
 
 /**
- * Statistiques agrégées de la collection (ou d'un sous-ensemble filtré) —
- * mêmes définitions que les capteurs HA (sensor.py), recalculées côté carte
- * pour permettre un panneau de statistiques sans dépendre d'entités HA
- * exposées sur un tableau de bord.
+ * Aggregated statistics of the collection (or a filtered subset) — same
+ * definitions as the HA sensors (sensor.py), recomputed on the card so the
+ * statistics panel works without depending on HA entities exposed on a
+ * dashboard.
  */
 function computeStats(whiskies) {
   const list = whiskies || [];
@@ -2710,14 +2704,14 @@ function computeStats(whiskies) {
   };
 }
 
-/** Réduit une répartition [ [label, count], ... ] aux `limit` premières entrées avec un pourcentage de barre relatif au maximum affiché. */
+/** Trims a breakdown [ [label, count], ... ] to the first `limit` entries with a bar percentage relative to the displayed maximum. */
 function topBreakdown(entries, limit = 8) {
   const top = (entries || []).slice(0, limit);
   const max = top.reduce((m, [, n]) => Math.max(m, n), 0) || 1;
   return top.map(([label, count]) => ({ label, count, pct: Math.round((count / max) * 100) }));
 }
 
-// ── Composant carte ───────────────────────────────────────────────────────
+// ── Card component ──────────────────────────────────────────────────────────
 
 class WhiskyCard extends HTMLElement {
   constructor() {
@@ -2762,7 +2756,7 @@ class WhiskyCard extends HTMLElement {
         () => this._fetchData(), `${DOMAIN}_updated`
       );
     } catch (e) {
-      // Abonnement optionnel : la carte reste utilisable sans rafraîchissement auto.
+      // Optional subscription: the card stays usable without auto-refresh.
     }
   }
 
@@ -2775,14 +2769,14 @@ class WhiskyCard extends HTMLElement {
     this._render();
   }
 
-  // ── Rendu principal : recherche/filtres + liste des fiches ────────────────
+  // ── Main render: search/filters + record list ──────────────────────────────
 
   _render() {
     const root = this.shadowRoot;
 
-    // Préserve le focus/la sélection d'un champ de la barre d'outils (ex. la
-    // recherche) à travers le innerHTML complet ci-dessous — sans ça, chaque
-    // frappe au clavier ferait perdre le focus du champ de recherche.
+    // Preserves focus/selection of a toolbar field (e.g. the search box)
+    // across the full innerHTML below — otherwise every keypress would make
+    // the search field lose focus.
     const active = root.activeElement;
     const activeId = active && active.id;
     const selStart = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
@@ -2791,19 +2785,18 @@ class WhiskyCard extends HTMLElement {
     const allWhiskies = (this._data && this._data.whiskies) || [];
     const filters = this._filters;
     const view = this._view;
-    // Sur l'onglet "Whisky bu", le filtre de statut n'a pas de sens (la vue
-    // ne montre que les exemplaires terminés) : on l'ignore pour ne pas
-    // masquer des fiches qui possèdent un exemplaire terminé mais dont un
-    // AUTRE exemplaire ne correspond pas au statut sélectionné.
+    // On the "🥂 Getrunkene" tab, the status filter makes no sense (the view
+    // only shows finished bottles): it is ignored so that records owning a
+    // finished bottle are not hidden just because ANOTHER bottle does not
+    // match the selected status.
     const whiskies = filterWhiskies(allWhiskies, view === "finished" ? { ...filters, status: "" } : filters);
     const total = whiskies.reduce((n, w) => n + ((w.slots && w.slots.length) || 0), 0);
     const filtered = whiskies.length !== allWhiskies.length;
 
-    // Onglet "Whisky bu" : mélange les bouteilles terminées de la collection
-    // ET les dégustations hors collection (tasting_log), avec les mêmes
-    // filtres texte/type que la collection (le filtre "Coups de cœur" ne
-    // s'applique qu'aux bouteilles réellement possédées, donc masque les
-    // dégustations hors collection quand il est actif).
+    // "🥂 Getrunkene" tab: mixes the collection's finished bottles AND the
+    // off-collection tastings (tasting_log), with the same text/type filters
+    // as the collection (the "Favorites" filter only applies to bottles
+    // actually owned, so it hides off-collection tastings when active).
     const allTastings = (this._data && this._data.tasting_log) || [];
     const tastingMatches = (t) => {
       if (filters.favorite) return false;
@@ -2906,13 +2899,13 @@ class WhiskyCard extends HTMLElement {
       if (el) {
         el.focus();
         if (selStart !== null && el.setSelectionRange) {
-          try { el.setSelectionRange(selStart, selEnd); } catch (e) { /* type d'input sans sélection (ex. number) */ }
+          try { el.setSelectionRange(selStart, selEnd); } catch (e) { /* input type without selection support (e.g. number) */ }
         }
       }
     }
   }
 
-  // ── Statistiques (commit 8) ────────────────────────────────────────────────
+  // ── Statistics ─────────────────────────────────────────────────────────────
 
   _openStats() {
     const box = this._openModal(this._statsHTML());
@@ -2958,8 +2951,8 @@ class WhiskyCard extends HTMLElement {
     `;
   }
 
-  // ── Modale (hors shadow root, comme Millésime — un formulaire doit rester
-  //    utilisable même si la carte est petite/en colonne latérale) ──────────
+  // ── Modal (outside the shadow root, like Millésime — a form must stay
+  //    usable even when the card is small / in a sidebar) ───────────────────
 
   _openModal(html) {
     this._closeModal();
@@ -2976,7 +2969,7 @@ class WhiskyCard extends HTMLElement {
     if (this._overlay) { this._overlay.remove(); this._overlay = null; }
   }
 
-  // ── Fiche détail ───────────────────────────────────────────────────────────
+  // ── Detail view ────────────────────────────────────────────────────────────
 
   _openDetail(w) {
     const box = this._openModal(this._detailHTML(w));
@@ -3003,9 +2996,9 @@ class WhiskyCard extends HTMLElement {
       if (status === "sealed") actions.push(`<button type="button" class="wc-btn wc-slot-open" data-idx="${idx}">${tr("Öffnen")}</button>`);
       if (status === "opened") actions.push(`<button type="button" class="wc-btn wc-slot-finish" data-idx="${idx}">${tr("Als leer markieren")}</button>`);
       actions.push(`<button type="button" class="wc-btn wc-slot-remove" data-idx="${idx}">${tr("Entfernen")}</button>`);
-      // Suivi manuel du niveau restant (commit 9 : svc_update_remaining) —
-      // uniquement pour un exemplaire ouvert, déclenche whisky_bottle_low
-      // côté backend au franchissement du seuil bas.
+      // Manual fill-level tracking (svc_update_remaining) — only for an
+      // opened bottle; triggers whisky_bottle_low on the backend when the
+      // low threshold is crossed.
       const remainingRow = status === "opened" ? `
         <div class="wc-slot-remaining-row">
           <label class="wc-slot-remaining-label">${tr("Füllstand")}
@@ -3136,7 +3129,7 @@ class WhiskyCard extends HTMLElement {
     });
   }
 
-  // ── Formulaire d'ajout / édition ─────────────────────────────────────────
+  // ── Add / edit form ─────────────────────────────────────────────────────────
 
   _openForm(existing) {
     const box = this._openModal(this._formHTML(existing));
@@ -3227,9 +3220,9 @@ class WhiskyCard extends HTMLElement {
     const fileInput = box.querySelector("#wc-photo-input");
     const fileInputCam = box.querySelector("#wc-photo-input-cam");
     box.querySelector("#wc-photo-cam").addEventListener("click", async () => {
-      // Appareil photo direct tenté en premier via getUserMedia (fiable sur
-      // Android, contrairement au seul attribut capture) ; repli sur l'input
-      // statique avec capture si getUserMedia est indisponible/refusé.
+      // Direct camera attempted first via getUserMedia (reliable on
+      // Android, unlike the capture attribute alone); falls back to the
+      // static input with capture if getUserMedia is unavailable/refused.
       const shot = await this._captureViaCamera(box);
       if (shot instanceof File) { this._onScanFile(box, shot); return; }
       if (shot === "cancel") return;
@@ -3263,10 +3256,10 @@ class WhiskyCard extends HTMLElement {
     });
   }
 
-  // ── Dégustation hors collection (onglet "🥂 Whisky bu") ───────────────────
-  // Formulaire volontairement plus léger que _formHTML : un whisky simplement
-  // goûté (bar, chez un ami, dégustation) n'a ni bouteille ni emplacement —
-  // svc_add_tasting alimente tasting_log, jamais whiskies[].
+  // ── Off-collection tasting (tab "🥂 Getrunkene") ──────────────────────────────
+  // Form deliberately lighter than _formHTML: a whisky that was merely
+  // tasted (bar, at a friend's, tasting) has neither bottle nor slot —
+  // svc_add_tasting feeds tasting_log, never whiskies[].
 
   _openTastingForm() {
     const box = this._openModal(this._tastingFormHTML());
@@ -3353,11 +3346,11 @@ class WhiskyCard extends HTMLElement {
     t.textContent = message;
   }
 
-  // ── Reconnaissance photo ──────────────────────────────────────────────────
+  // ── Photo recognition ──────────────────────────────────────────────────────
 
-  // Accepte soit un <input type=file> (parcours galerie / input statique
-  // avec capture), soit directement un File (photo issue du modal caméra
-  // getUserMedia — voir _captureViaCamera).
+  // Accepts either an <input type=file> (gallery browse / static input
+  // with capture) or a File directly (photo from the getUserMedia camera
+  // modal — see _captureViaCamera).
   _onScanFile(box, inputOrFile) {
     const file = inputOrFile instanceof File ? inputOrFile : (inputOrFile.files && inputOrFile.files[0]);
     if (!file) return;
@@ -3382,14 +3375,14 @@ class WhiskyCard extends HTMLElement {
     if (!(inputOrFile instanceof File)) inputOrFile.value = "";
   }
 
-  // ── Repli caméra via getUserMedia (Android) ─────────────────────────────
-  // Sur certains appareils Android, la WebView ouvre la galerie même avec un
-  // input statique portant l'attribut capture. getUserMedia est donc tenté
-  // en premier — c'est le seul chemin qui garantit l'ouverture de l'appareil
-  // photo. L'API n'existe qu'en contexte sécurisé (HTTPS / app compagnon en
-  // URL externe / localhost) : en HTTP local, on prévient explicitement
-  // l'utilisateur avant le repli galerie. (Porté de millesime-card.js,
-  // même correctif que l'issue #7 de Millésime.)
+  // ── Camera fallback via getUserMedia (Android) ──────────────────────────────
+  // On some Android devices, the WebView opens the gallery even with a
+  // static input carrying the capture attribute. getUserMedia is therefore
+  // attempted first — it is the only path that guarantees the camera opens.
+  // The API only exists in secure contexts (HTTPS / companion app with an
+  // external URL / localhost): on plain local HTTP, the user is explicitly
+  // warned before the gallery fallback. (Ported from millesime-card.js,
+  // same fix as Millésime issue #7.)
   _cameraSupported() {
     return !!navigator.mediaDevices?.getUserMedia;
   }
@@ -3409,8 +3402,8 @@ class WhiskyCard extends HTMLElement {
     }
   }
 
-  // Résout avec : File (photo capturée) | "cancel" (fermé par l'utilisateur)
-  // | null (échec technique → l'appelant retombe sur l'input statique).
+  // Resolves with: File (captured photo) | "cancel" (closed by the user)
+  // | null (technical failure → the caller falls back to the static input).
   async _captureViaCamera(box) {
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
       this._cameraFallbackNotice(box, "insecure");
@@ -3448,7 +3441,7 @@ class WhiskyCard extends HTMLElement {
       const btnShot = mkBtn(tr("📷 Aufnehmen"), true);
       const btnCancel = mkBtn(tr("Abbrechen"), false);
       const done = (result) => {
-        try { stream.getTracks().forEach((t) => t.stop()); } catch (err) { /* déjà arrêté */ }
+        try { stream.getTracks().forEach((t) => t.stop()); } catch (err) { /* already stopped */ }
         overlay.remove();
         resolve(result);
       };
@@ -3488,14 +3481,14 @@ class WhiskyCard extends HTMLElement {
       panel.innerHTML = `<div class="wc-recog-panel wc-recog-empty">${tr("Auf dem Foto wurden keine verwertbaren Informationen erkannt — bitte von Hand ergänzen.")}</div>`;
       return;
     }
-    // Les champs du VRAI formulaire (data-key) vivent dans <form id="wc-form">,
-    // un frère du panneau de reconnaissance — jamais à l'intérieur. On y
-    // scope systématiquement les lookups [data-key] ci-dessous : sans ça,
-    // box.querySelector('[data-key=...]') matche EN PREMIER la case à cocher
-    // du panneau (qui porte elle aussi data-key, et précède le formulaire
-    // dans le DOM), et écrit silencieusement la valeur sur cette case au
-    // lieu du champ visible — c'est ce qui rendait l'application (auto ou
-    // via le bouton) totalement invisible à l'écran.
+    // The REAL form fields (data-key) live in <form id="wc-form">, a sibling
+    // of the recognition panel — never inside it. The [data-key] lookups
+    // below are always scoped to the form: otherwise
+    // box.querySelector('[data-key=...]') would match the panel's checkbox
+    // FIRST (it also carries data-key and precedes the form in the DOM) and
+    // silently write the value to that checkbox instead of the visible
+    // field — which is what made applying (auto or via the button)
+    // completely invisible on screen.
     const formEl = box.querySelector("#wc-form");
     const result = resp.result;
     const fields = recognitionFieldList(result);
@@ -3522,11 +3515,10 @@ class WhiskyCard extends HTMLElement {
         ${fields.length ? `<button type="button" class="wc-btn wc-btn-primary" id="wc-recog-apply">${tr("Ausgewählte Felder übernehmen")}</button>` : ""}
       </div>
     `;
-    // Applique dans le formulaire les champs actuellement cochés dans le
-    // panneau (clé → valeur du résultat Gemini). Utilisé une première fois
-    // automatiquement ci-dessous (dès que le résultat arrive, sans action de
-    // l'utilisateur), puis à nouveau à chaque clic sur « Appliquer » si la
-    // sélection de cases a changé entre-temps.
+    // Applies to the form the fields currently checked in the panel
+    // (key → value from the AI result). Used once automatically below
+    // (as soon as the result arrives, without user action), then again on
+    // every "Apply" click if the checkbox selection has changed meanwhile.
     const applySelected = (silent) => {
       const selected = [...panel.querySelectorAll(".wc-recog-check:checked")].map((c) => c.dataset.key);
       for (const key of selected) {
@@ -3539,10 +3531,9 @@ class WhiskyCard extends HTMLElement {
       if (!silent) this._toast(box, `${selected.length} ${tr("Feld(er) übernommen — bitte prüfen und speichern.")}`);
       return selected.length;
     };
-    // Application automatique immédiate (fix : jusqu'ici rien n'était copié
-    // dans le formulaire tant que l'utilisateur ne cliquait pas explicitement
-    // sur « Appliquer », ce qui donnait l'impression que la reconnaissance ne
-    // servait à rien).
+    // Immediate automatic application (fix: until now nothing was copied
+    // into the form unless the user explicitly clicked "Apply", which made
+    // the recognition look useless).
     const appliedCount = applySelected(true);
     if (appliedCount > 0) {
       this._toast(box, `${appliedCount} ${tr("Feld(er) erkannt und automatisch übernommen — bitte prüfen und speichern.")}`);
@@ -3741,7 +3732,7 @@ if (typeof customElements !== "undefined") {
   });
 }
 
-// ── Export pour les tests Node (voir tests/) — sans effet en navigateur ────
+// ── Export for Node tests (see tests/) — no effect in the browser ──────────
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     WHISKY_TYPE_VALUES, CASK_TYPE_SUGGESTIONS, TRI_FIELDS, NUMBER_FIELDS,

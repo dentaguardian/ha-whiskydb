@@ -1,16 +1,15 @@
-"""WhiskyDB — Whisky-Sammlung für Home Assistant.
+"""WhiskyDB — a whisky collection for Home Assistant.
 
-WhiskyDB — deutscher Fork von ha-whisky (github.com/silventjeremie-lgtm/
-ha-whisky), das selbst aus Millésime (github.com/Redsklns/ha-millesime, MIT)
-abgeleitet ist. Gleiche Architektur (lokaler JSON-Speicher, physisch
-agnostische Regale/Plätze, selbst ausgelieferte Lovelace-Karte), eigene
-Domain "whiskydb", deutsche Oberfläche und ein OpenAI-kompatibles
-KI-Backend (Standard: Mistral) statt Gemini.
+WhiskyDB — international rework of ha-whisky (github.com/silventjeremie-lgtm/
+ha-whisky), which itself derives from Millésime (github.com/Redsklns/ha-millesime,
+MIT). Same architecture (local JSON storage, content-agnostic racks/slots,
+self-served Lovelace card), own domain "whiskydb", a multilingual UI (12
+languages, German as source language) and an OpenAI-compatible AI backend
+(default: Mistral) instead of Gemini.
 
-Keine 3D-Visualisierung und kein KI-Sommelier. Keine Abhängigkeit von
-Whiskybase oder einer anderen geschlossenen Datenbank — ohne KI-API-Key
-gilt reine manuelle Eingabe, kein automatischer Fallback (dokumentierte
-Einschränkung).
+No 3D visualisation and no AI sommelier. No dependency on Whiskybase or any
+other closed database — without an AI API key everything is manual entry,
+no automatic fallback (documented limitation).
 """
 from __future__ import annotations
 
@@ -38,16 +37,15 @@ DATA_FILE = "whiskydb_data.json"
 
 
 def _read_manifest_version() -> str:
-    """Lit la version depuis manifest.json — source UNIQUE de vérité pour le
-    cache-busting de la carte (voir _async_register_card, url = .../whisky-
-    card.js?v=VERSION). RÉGRESSION CORRIGÉE ICI : une constante VERSION
-    dupliquée à la main restait figée à "1.0.0" alors que manifest.json et
-    whisky-card.js avançaient normalement à chaque version (1.0.1, 1.0.2,
-    1.1.0, 1.2.0) — l'URL de la ressource Lovelace ne changeait donc JAMAIS,
-    et le navigateur continuait de servir indéfiniment le tout premier
-    whisky-card.js mis en cache, quelle que soit la mise à jour réellement
-    installée. En dérivant VERSION de manifest.json, une seule valeur à
-    bumper par version (déjà fait à chaque release) suffit désormais."""
+    """Reads the version from manifest.json — the SINGLE source of truth for
+    the card's cache-busting (see _async_register_card, url = .../whisky-
+    card.js?v=VERSION). REGRESSION FIXED HERE: a hand-duplicated VERSION
+    constant was stuck at "1.0.0" while manifest.json and whisky-card.js
+    moved on with every release (1.0.1, 1.0.2, 1.1.0, 1.2.0) — so the
+    Lovelace resource URL never changed and the browser kept serving the
+    very first cached whisky-card.js indefinitely, no matter which update
+    was actually installed. By deriving VERSION from manifest.json, a single
+    value bumped per release (already done for every release) is enough."""
     try:
         manifest_path = os.path.join(os.path.dirname(__file__), "manifest.json")
         with open(manifest_path, "r", encoding="utf-8") as f:
@@ -58,9 +56,9 @@ def _read_manifest_version() -> str:
 
 VERSION = _read_manifest_version()
 
-# ── Classification whisky (brief §2) ──────────────────────────────────────────
-# Liste FERMÉE utilisée pour valider whisky_meta.whisky_type. "Other" couvre
-# tout style non listé sans bloquer la saisie.
+# ── Whisky classification ─────────────────────────────────────────────────────
+# Closed list used to validate whisky_meta.whisky_type. "Other" covers any
+# unlisted style without blocking input.
 WHISKY_TYPE_VALUES = [
     "Single Malt", "Blended Malt", "Blended Whisky", "Single Grain",
     "Bourbon", "Rye", "Tennessee Whiskey", "Corn Whiskey",
@@ -68,27 +66,26 @@ WHISKY_TYPE_VALUES = [
     "World Whisky", "Other",
 ]
 
-# Exemples de fûts (brief §2) — INDICATIF seulement : le champ cask_type
-# reste une chaîne libre (trop de variantes réelles pour une liste fermée,
-# ex. "2nd Fill Oloroso Sherry Hogshead"), cette liste alimente uniquement
-# l'autocomplétion côté carte (commit 6).
+# Cask examples — INDICATIVE only: the cask_type field stays a free string
+# (too many real-world variants for a closed list, e.g. "2nd Fill Oloroso
+# Sherry Hogshead"); this list only feeds the card's autocomplete.
 CASK_TYPE_SUGGESTIONS = [
     "Bourbon", "First Fill Bourbon", "Refill Bourbon", "Sherry", "Oloroso",
     "PX", "Port", "Madeira", "Wine", "Virgin Oak", "Mizunara",
     "Multiple Casks", "Other",
 ]
 
-# État d'une bouteille PHYSIQUE (porté par chaque slot, pas par la fiche —
-# voir _mk_slot ci-dessous : on peut posséder plusieurs exemplaires du même
-# whisky dans des états différents).
+# State of a PHYSICAL bottle (carried by each slot, not by the record —
+# see _mk_slot below: you can own several bottles of the same whisky in
+# different states).
 BOTTLE_STATUS_VALUES = ("sealed", "opened", "finished")
 
-# ── Champs éditables par les services add_whisky/update_whisky ──────────────
-# Séparés en deux groupes : COMMON (niveau fiche, communs à toute future
-# boisson) et META (uniquement whisky_meta). Un appel de service reste PLAT
-# (comme dans Millésime) : add_whisky(distillery=..., cask_type=...) plutôt
-# que d'exiger un sous-dictionnaire — plus simple à remplir depuis Outils de
-# développement → Actions. Le routage vers whisky_meta est interne.
+# ── Fields editable via the add_whisky/update_whisky services ───────────────
+# Split into two groups: COMMON (record level, shared with any future
+# beverage) and META (whisky_meta only). Service calls stay FLAT
+# (as in Millésime): add_whisky(distillery=..., cask_type=...) instead of
+# requiring a nested dict — easier to fill in from Developer Tools → Actions.
+# Routing to whisky_meta is internal.
 COMMON_FIELDS = [
     "image_url", "label_image_url", "price", "current_value", "currency",
     "purchase_date", "purchase_location", "storage_location", "notes",
@@ -107,13 +104,13 @@ META_FIELDS = [
     "whiskybase_id", "whiskybase_url",
 ]
 
-# ── Modèle de données ─────────────────────────────────────────────────────────
-# cellars[] : casiers/étagères de rangement (structure physique, réutilisée
-#             telle quelle du fork Millésime — déjà agnostique du contenu).
-# whiskies[]: fiches whisky. Une fiche = un produit ; slots[] = ses exemplaires
-#             physiques (comme wines[]/slots[] côté Millésime).
+# ── Data model ───────────────────────────────────────────────────────────────
+# cellars[] : storage collections (physical structure, reused as-is from the
+#             Millésime fork — already content-agnostic).
+# whiskies[]: whisky records. One record = one product; slots[] = its
+#             physical bottles (like wines[]/slots[] in Millésime).
 DEFAULT_DATA: dict = {
-    "cellars": [{"id": "main", "name": "Sammlung", "racks": []}],
+    "cellars": [{"id": "main", "name": "Collection", "racks": []}],
     "whiskies": [],
     "tasting_log": [],
 }
@@ -146,19 +143,19 @@ def _uid() -> str:
     return str(uuid.uuid4())[:8]
 
 
-# ── Helpers casiers/emplacements (repris à l'identique de Millésime : la
-#    structure de rangement physique est déjà agnostique du contenu) ────────
+# ── Collection/slot helpers (taken verbatim from Millésime: the physical
+#    storage structure is already content-agnostic) ──────────────────────────
 
 def _cellars(d: dict) -> list[dict]:
-    """Liste des caves/armoires ; garantit qu'il en existe toujours une."""
+    """List of collections/cabinets; guarantees that one always exists."""
     cs = d.setdefault("cellars", [])
     if not cs:
-        cs.append({"id": "main", "name": "Sammlung", "racks": []})
+        cs.append({"id": "main", "name": "Collection", "racks": []})
     return cs
 
 
 def _cellar(d: dict, cellar_id: str | None = None) -> dict:
-    """Cave d'identifiant donné, ou la première à défaut."""
+    """Collection with the given ID, or the first one by default."""
     cs = _cellars(d)
     if cellar_id:
         for c in cs:
@@ -168,12 +165,12 @@ def _cellar(d: dict, cellar_id: str | None = None) -> dict:
 
 
 def _all_racks(d: dict) -> list[dict]:
-    """Tous les casiers, toutes caves confondues (les rack_id restent uniques)."""
+    """All racks across all collections (rack_id stays unique)."""
     return [r for c in _cellars(d) for r in c.get("racks", [])]
 
 
 def _rack_capacity(rk: dict) -> int:
-    """Capacité d'un casier : colonnes × étagères × niveaux (superposition)."""
+    """Capacity of a rack: columns × shelves × levels (stacked)."""
     levels = max(1, min(4, int(rk.get("levels", 1) or 1)))
     return rk.get("columns", 8) * rk.get("shelves", 2) * levels
 
@@ -181,14 +178,13 @@ def _rack_capacity(rk: dict) -> int:
 def _slot_taken(d: dict, rack_id: str, slot: int,
                 exclude_whisky_id: str | None = None,
                 exclude_slot_idx: int | None = None) -> bool:
-    """Retourne True si l'emplacement est déjà occupé dans ce casier.
+    """Returns True if the slot is already occupied in this rack.
 
-    Un rack_id vide/falsy signifie "sans emplacement assigné" (bouteille
-    comptée dans la collection sans placement physique — le formulaire v1 de
-    la carte ne propose pas encore de sélecteur d'étagère, voir commit 6) :
-    ces exemplaires ne peuvent jamais entrer en collision entre eux, sinon
-    une seule bouteille "non placée" pourrait exister dans toute la
-    collection avant que le service ne refuse les suivantes.
+    An empty/falsy rack_id means "no assigned slot" (bottle counted in the
+    collection without a physical placement — the card's v1 form does not
+    offer a rack selector yet, see commit 6): such bottles can never collide
+    with each other, otherwise only a single "unplaced" bottle could exist
+    in the whole collection before the service refuses the following ones.
     """
     if not rack_id:
         return False
@@ -203,11 +199,11 @@ def _slot_taken(d: dict, rack_id: str, slot: int,
 
 def _mk_slot(rack_id: str, slot: int, comment=None, size=None,
              bottle_status: str = "sealed") -> dict:
-    """Construit un emplacement = UNE bouteille physique.
+    """Builds a slot = ONE physical bottle.
 
-    bottle_status/opened_date/remaining_percent vivent ICI (par exemplaire),
-    pas sur la fiche whisky : on peut posséder plusieurs bouteilles du même
-    whisky dans des états différents (une ouverte, deux scellées).
+    bottle_status/opened_date/remaining_percent live HERE (per bottle),
+    not on the whisky record: you can own several bottles of the same
+    whisky in different states (one opened, two sealed).
     """
     s: dict = {
         "rack_id": rack_id,
@@ -222,10 +218,10 @@ def _mk_slot(rack_id: str, slot: int, comment=None, size=None,
 
 
 def _new_whisky_record(name: str, whisky_meta: dict | None = None, **fields) -> dict:
-    """Construit une fiche whisky vierge (champs communs + whisky_meta imbriqué).
+    """Builds a blank whisky record (common fields + nested whisky_meta).
 
-    Utilisé par les services (commit 3) et par les tests (commit 10) — centralise
-    la forme exacte de l'objet pour éviter toute divergence entre les deux.
+    Used by the services (commit 3) and by the tests (commit 10) —
+    centralises the exact shape of the object to avoid divergence.
     """
     record = {
         "id":               _uid(),
@@ -289,11 +285,11 @@ def _new_whisky_record(name: str, whisky_meta: dict | None = None, **fields) -> 
     return record
 
 
-# ── KI-Backend: OpenAI-kompatibler Endpunkt (Mistral, Ollama, LM Studio …) ──
-# WhiskyDB nutzt statt eines proprietären Gemini-Calls einen generischen
-# OpenAI-kompatiblen Chat-Completions-Endpunkt. Standard ist Mistral
-# (La Plateforme, https://console.mistral.ai) — jeder Anbieter mit
-# /v1/chat/completions funktioniert (Ollama, LM Studio, OpenRouter, …).
+# ── AI backend: OpenAI-compatible endpoint (Mistral, Ollama, LM Studio …) ───
+# Instead of a proprietary Gemini call, WhiskyDB uses a generic
+# OpenAI-compatible chat-completions endpoint. The default is Mistral
+# (La Plateforme, https://console.mistral.ai) — any provider with
+# /v1/chat/completions works (Ollama, LM Studio, OpenRouter, …).
 
 AI_BASE_URL_DEFAULT = "https://api.mistral.ai/v1"
 AI_TEXT_MODEL       = "mistral-small-latest"
@@ -301,7 +297,7 @@ AI_VISION_MODEL     = "pixtral-12b-latest"
 AI_TEXT_FALLBACK    = "open-mistral-nemo"
 AI_VISION_FALLBACK  = "pixtral-12b-latest"
 
-# Bevorzugte Modelle (in dieser Reihenfolge), sobald die Discovery lief:
+# Preferred models (in this order), once discovery has run:
 _PREF_TEXT = [
     "mistral-small-latest", "mistral-medium-latest", "mistral-large-latest",
     "open-mistral-nemo", "mistral-tiny",
@@ -323,7 +319,7 @@ ERR_NO_KEY         = "no_key"
 
 
 def _base_url(api_base: str) -> str:
-    """Normalisiert die Base-URL: ohne Trailingslash, ohne alten Endpunkt."""
+    """Normalises the base URL: no trailing slash, no stale endpoint."""
     b = (api_base or AI_BASE_URL_DEFAULT).strip().rstrip("/")
     if b.endswith("/chat/completions"):
         b = b[: -len("/chat/completions")]
@@ -331,9 +327,9 @@ def _base_url(api_base: str) -> str:
 
 
 async def _discover_ai_models(hass: HomeAssistant, api_key: str, api_base: str) -> None:
-    """Wählt die tatsächlich verfügbaren Text-/Vision-Modelle über
-    GET {base}/models (OpenAI-kompatibel: {"data": [{"id": ...}]}).
-    Still und nicht blockierend: bei Fehler bleiben die stabilen Fallbacks aktiv."""
+    """Picks the actually available text/vision models via
+    GET {base}/models (OpenAI-compatible: {"data": [{"id": ...}]}).
+    Silent and non-blocking: on failure the stable fallbacks stay active."""
     if not api_key:
         return
     session = async_get_clientsession(hass)
@@ -348,7 +344,7 @@ async def _discover_ai_models(hass: HomeAssistant, api_key: str, api_base: str) 
                 return
             data = await resp.json(content_type=None)
     except Exception as exc:
-        _LOGGER.warning("WhiskyDB — Modell-Discovery fehlgeschlagen (%s), Fallback aktiv", exc)
+        _LOGGER.warning("WhiskyDB — model discovery failed (%s), fallbacks active", exc)
         return
 
     available: set[str] = set()
@@ -396,9 +392,9 @@ async def _ai_call(
     messages: list[dict], timeout: int, label: str,
     temperature: float = 0.1, session=None,
 ) -> tuple[dict | None, str | None]:
-    """Einheitlicher OpenAI-kompatibler Chat-Completions-Call: Modell-Fallback
-    bei 404/5xx, ein Wiederholungsversuch ohne response_format bei 400,
-    sofortiger Abbruch bei 429/401/403."""
+    """Unified OpenAI-compatible chat-completions call: model fallback on
+    404/5xx, one retry without response_format on 400, immediate abort on
+    429/401/403."""
     session = session or async_get_clientsession(hass)
     saw_404 = saw_timeout = saw_other = False
 
@@ -429,12 +425,12 @@ async def _ai_call(
                         return data, None
                     if status == 400 and attempt == 0:
                         _LOGGER.warning(
-                            "%s: HTTP 400 mit response_format (%s) → Wiederholung ohne JSON-Modus",
+                            "%s: HTTP 400 with response_format (%s) → retrying without JSON mode",
                             label, model)
                         continue
                     if status == 404:
                         saw_404 = True
-                        _LOGGER.warning("%s: Modell %s nicht verfügbar (404), Fallback", label, model)
+                        _LOGGER.warning("%s: model %s unavailable (404), falling back", label, model)
                         break
                     if status in (429, 401, 403):
                         saw_other = True
@@ -445,16 +441,16 @@ async def _ai_call(
                     break
             except asyncio.TimeoutError:
                 saw_timeout = True
-                _LOGGER.warning("%s: Zeitüberschreitung (%s, %ss)", label, model, timeout)
+                _LOGGER.warning("%s: timeout (%s, %ss)", label, model, timeout)
                 break
             except Exception as exc:
                 saw_other = True
-                _LOGGER.warning("%s: Fehler (%s) %s", label, model, exc)
+                _LOGGER.warning("%s: error (%s) %s", label, model, exc)
                 break
 
     if saw_404 and not saw_other and not saw_timeout:
         _LOGGER.error(
-            "%s: KEIN nutzbares Modell (%s). Prüfe API-Key und Modelle des Endpunkts.",
+            "%s: NO usable model (%s). Check the API key and the endpoint's models.",
             label, ", ".join(models))
         if not _AI_MODELS["discovered"] and api_key:
             hass.async_create_task(_discover_ai_models(hass, api_key, api_base))
@@ -465,21 +461,21 @@ async def _ai_call(
 
 
 def _ai_text(data: dict) -> tuple[str, str]:
-    """Nutzbare Antwort einer Chat-Completions-Response + finish_reason
-    ('length' = wegen Token-Limit abgeschnitten)."""
+    """Usable answer of a chat-completions response + finish_reason
+    ('length' = truncated because of the token limit)."""
     choice = (data.get("choices") or [{}])[0] or {}
     finish = choice.get("finish_reason") or ""
     msg = choice.get("message") or {}
     content = msg.get("content")
-    if isinstance(content, list):  # manche Anbieter liefern Content-Parts
+    if isinstance(content, list):  # some providers return content parts
         content = "".join(p.get("text", "") for p in content if isinstance(p, dict))
     return (content or "").strip(), finish
 
 
 def _json_salvage(txt: str):
-    """Rettet vollständige JSON-Objekte aus einer durch das Token-Limit
-    abgeschnittenen Antwort, statt alles wegen eines abgeschnittenen
-    letzten Objekts zu verwerfen."""
+    """Rescues complete JSON objects from a response truncated by the
+    token limit, instead of discarding everything because of one
+    truncated trailing object."""
     if not txt:
         return None
     s = txt.strip()
@@ -524,8 +520,8 @@ def _json_salvage(txt: str):
 
 
 def _ai_payload(data: dict):
-    """JSON aus einer KI-Antwort, tolerant gegenüber ```json-Hüllen, Beiwerk
-    und durch das Token-Limit abgeschnittenen Antworten."""
+    """JSON from an AI answer, tolerant of ```json wrappers, noise and
+    responses truncated by the token limit."""
     raw, finish = _ai_text(data)
     if not raw.strip():
         raise ValueError(f"leere Antwort (finish_reason={finish or '?'})")
@@ -546,15 +542,15 @@ def _ai_payload(data: dict):
     if salvaged:
         _LOGGER.warning("WhiskyDB — Antwort abgeschnitten (finish_reason=%s), Teilinhalt gerettet", finish or "?")
         return salvaged
-    raise ValueError(f"JSON nicht gefunden (finish_reason={finish or '?'}, {len(raw)} Zeichen)")
+    raise ValueError(f"JSON not found (finish_reason={finish or '?'}, {len(raw)} characters)")
 
 
-# ── KI-Systemprompt WHISKY (deutsch) ────────────────────────────────────────
-# Kritischer Punkt (aus dem Original übernommen): Ein unabhängiger Abfüller
+# ── AI system prompt WHISKY (deliberately kept German — functional) ──────────
+# Critical point (inherited from the original): an independent bottler
 # (Signatory Vintage, Gordon & MacPhail, Cadenhead's, Douglas Laing, Berry
-# Bros. & Rudd, That Boutique-y Whisky Company ...) IST NICHT die Destillerie.
-# Der Prompt nennt explizite Beispiele, um diese häufige Verwechslung auf
-# Independents-Etiketten zu vermeiden.
+# Bros. & Rudd, That Boutique-y Whisky Company ...) is NOT the distillery.
+# The prompt names explicit examples to avoid this common confusion on
+# independent-bottler labels.
 _AI_SYSTEM_WHISKY = """\
 Du bist ein weltweit erfahrener Whisky-Experte (Single Malt, Blended, Bourbon, \
 Rye, japanischer Whisky ...) und kannst Flaschenetiketten lesen.
@@ -619,7 +615,7 @@ Falls das Bild erkennbar KEINE Whiskyflasche zeigt, gib \
 lasse alle anderen Felder null.\
 """
 
-# ── Sprachweiche: KI antwortet in der HA-Sprache des Nutzers (i18n v2.1.0) ────
+# ── Language switch: the AI answers in the user's HA language (i18n v2.1.0) ──
 _AI_LANGUAGE_NAMES = {
     "de": "Deutsch", "en": "Englisch", "fr": "Französisch", "es": "Spanisch",
     "it": "Italienisch", "nl": "Niederländisch", "pt": "Portugiesisch",
@@ -628,10 +624,11 @@ _AI_LANGUAGE_NAMES = {
 
 
 def _ai_system_for(language: str) -> str:
-    """Systemprompt + Anweisung zur Antwort-Sprache des Nutzers.
+    """System prompt + instruction for the user's answer language.
 
-    Der Verfahrens-Prompt bleibt deutsch; die Antwort-Sprache wird per
-    Anweisung gesetzt — LLMs folgen dieser Anweisung zuverlässig.
+    The procedural prompt stays German (its JSON keys are fixed data-model
+    identifiers); the answer language is set via instruction — LLMs follow
+    this instruction reliably.
     """
     base = (language or "de").split("-")[0].lower()
     name = _AI_LANGUAGE_NAMES.get(base, "Deutsch")
@@ -684,14 +681,14 @@ _WHISKY_RESULT_BOOL_FIELDS = ("limited_edition", "peated")
 
 
 def _parse_ai_whisky_response(raw: str, source: str, finish: str = "") -> tuple[dict | None, str | None]:
-    """Parst die JSON-Antwort der Whisky-KI.
+    """Parses the whisky AI's JSON answer.
 
-    Jedes Feld bleibt None, wenn die KI null geantwortet oder das Feld
-    ausgelassen hat — nie wird ein Wert erfunden, um es "hübsch" zu machen
-    (null statt Halluzination). Die Lücken zeigt der Validierungs-Screen der
-    Karte, nicht dieser Parser.
+    Every field stays None when the AI answered null or omitted the field —
+    a value is never invented to make it look "nice" (null instead of
+    hallucination). Gaps are shown by the card's validation screen, not by
+    this parser.
 
-    Rückgabe: (Ergebnis | None, Fehlercode | None).
+    Returns: (result | None, error code | None).
     """
     if not raw:
         _LOGGER.warning("WhiskyDB — leere Antwort (%s, finish_reason=%s)", source, finish or "?")
@@ -728,10 +725,10 @@ def _parse_ai_whisky_response(raw: str, source: str, finish: str = "") -> tuple[
         result[f] = _safe_bool_or_none(parsed.get(f))
 
     if result.get("whisky_type") and result["whisky_type"] not in WHISKY_TYPE_VALUES:
-        # Großzügige Normalisierung (Groß-/Kleinschreibung, Leerzeichen)
+        # Lenient normalization (case, whitespace)
         match = next((v for v in WHISKY_TYPE_VALUES
                       if v.lower() == result["whisky_type"].strip().lower()), None)
-        result["whisky_type"] = match  # None ohne Treffer: "Other" wird nicht erzwungen
+        result["whisky_type"] = match  # None if no match: "Other" is not forced
 
     score = _safe_float_or_none(parsed.get("confidence_score"))
     result["confidence_score"] = max(0.0, min(1.0, score)) if score is not None else None
@@ -745,7 +742,7 @@ def _parse_ai_whisky_response(raw: str, source: str, finish: str = "") -> tuple[
     if not result.get("name") and not any(
         result.get(f) for f in _WHISKY_RESULT_FIELDS if f != "name"
     ):
-        # Nichts Verwertbares: Bild nicht als Whisky erkannt, oder leer
+        # Nothing usable: image not recognized as a whisky, or empty
         return None, None
 
     return result, None
@@ -754,7 +751,7 @@ def _parse_ai_whisky_response(raw: str, source: str, finish: str = "") -> tuple[
 async def _ai_analyze_whisky_photo(
     hass: HomeAssistant, image_b64: str, mime_type: str, api_key: str, api_base: str, language: str = "de"
 ) -> tuple[dict | None, str | None]:
-    """Analysiert ein Whisky-Etikettenfoto über ein visionsfähiges Modell."""
+    """Analyses a whisky label photo using a vision-capable model."""
     messages = [
         {"role": "system", "content": _ai_system_for(language)},
         {"role": "user", "content": [
@@ -773,7 +770,7 @@ async def _ai_analyze_whisky_photo(
             await asyncio.sleep(3.0)
 
     if data is None:
-        _LOGGER.warning("WhiskyDB Foto: kein Modell erfolgreich (%s)", last_code)
+        _LOGGER.warning("WhiskyDB photo: no model succeeded (%s)", last_code)
         return None, last_code or ERR_UNAVAILABLE
 
     raw, finish = _ai_text(data)
@@ -782,15 +779,15 @@ async def _ai_analyze_whisky_photo(
     except Exception as exc:
         _LOGGER.warning("WhiskyDB Foto: Lesefehler (%s)", exc)
         return None, ERR_TRUNCATED if finish == "length" else ERR_PARSE_ERROR
-    _LOGGER.info("WhiskyDB Foto: %s", "Ergebnis gefunden" if result else "nichts Verwertbares")
+    _LOGGER.info("WhiskyDB photo: %s", "result found" if result else "nothing usable")
     return result, err
 
 
 async def _ai_search_whisky_text(
     hass: HomeAssistant, query: str, api_key: str, api_base: str, language: str = "de"
 ) -> tuple[dict | None, str | None]:
-    """KI-Suche anhand des Namens (ohne API-Key wird diese Funktion nicht
-    aufgerufen, siehe WebSocket-Handler)."""
+    """AI search by name (without an API key this function is never
+    called, see the WebSocket handler)."""
     messages = [
         {"role": "system", "content": _ai_system_for(language)},
         {"role": "user", "content": f'Identifiziere diesen Whisky: "{query}"'},
@@ -806,17 +803,17 @@ async def _ai_search_whisky_text(
         result, err = _parse_ai_whisky_response(raw, f"text:'{query}'", finish)
         return result, err
     except Exception as exc:
-        _LOGGER.warning("WhiskyDB Textfehler für '%s': %s", query, exc)
+        _LOGGER.warning("WhiskyDB text error for '%s': %s", query, exc)
         return None, ERR_UNAVAILABLE
 
 
-# ── Carte Lovelace : auto-service (repris à l'identique du fork Millésime) ──
+# ── Lovelace card: self-served (taken verbatim from the Millésime fork) ─────
 
 _CARD_URL_PATH = "/whiskydb/whisky-card.js"
 
 
 async def _async_register_card(hass: HomeAssistant) -> None:
-    """Sert whisky-card.js depuis l'intégration et l'ajoute aux ressources Lovelace."""
+    """Serves whisky-card.js from the integration and adds it to the Lovelace resources."""
     card_path = os.path.join(os.path.dirname(__file__), "whisky-card.js")
     if not os.path.exists(card_path):
         _LOGGER.error("WhiskyDB: whisky-card.js NICHT GEFUNDEN (%s)", card_path)
@@ -841,18 +838,18 @@ async def _async_register_card(hass: HomeAssistant) -> None:
 
             hass.http.register_view(_WhiskyCardView())
             ok = True
-            _LOGGER.warning("WhiskyDB: Karte über HTTP-View ausgeliefert: %s", _CARD_URL_PATH)
+            _LOGGER.warning("WhiskyDB: card served via HTTP view: %s", _CARD_URL_PATH)
         except Exception as exc:
-            _LOGGER.warning("WhiskyDB: HTTP-View fehlgeschlagen (%s), versuche statischen Pfad", exc)
+            _LOGGER.warning("WhiskyDB: HTTP view failed (%s), trying static path", exc)
             try:
                 from homeassistant.components.http import StaticPathConfig
                 await hass.http.async_register_static_paths(
                     [StaticPathConfig(_CARD_URL_PATH, card_path, False)]
                 )
                 ok = True
-                _LOGGER.warning("WhiskyDB: Karte über statischen Pfad ausgeliefert")
+                _LOGGER.warning("WhiskyDB: card served via static path")
             except Exception as exc2:
-                _LOGGER.error("WhiskyDB: Karte kann nicht ausgeliefert werden (%s)", exc2)
+                _LOGGER.error("WhiskyDB: card cannot be served (%s)", exc2)
 
         if ok:
             hass.data[DOMAIN]["_card_http_done"] = True
@@ -875,17 +872,17 @@ async def _async_register_card(hass: HomeAssistant) -> None:
             for r in existing:
                 if r.get("url") != url:
                     await resources.async_update_item(r["id"], {"res_type": "module", "url": url})
-                    _LOGGER.warning("WhiskyDB: Ressource aktualisiert → %s", url)
+                    _LOGGER.warning("WhiskyDB: resource updated → %s", url)
         else:
             await resources.async_create_item({"res_type": "module", "url": url})
-            _LOGGER.warning("WhiskyDB: Ressource angelegt → %s", url)
+            _LOGGER.warning("WhiskyDB: resource created → %s", url)
     except Exception as exc:
-        _LOGGER.error("WhiskyDB: Lovelace-Ressource nicht möglich (%s) — füge %s manuell hinzu",
+        _LOGGER.error("WhiskyDB: could not register Lovelace resource (%s) — add %s manually",
                       exc, url)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Initialise Whisky."""
+    """Set up WhiskyDB."""
     hass.data.setdefault(DOMAIN, {})
     data = await hass.async_add_executor_job(_load, hass)
 
@@ -909,14 +906,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
-    # Verfügbare KI-Modelle im Hintergrund entdecken (stabile Fallbacks,
-    # bis die Discovery durch ist) — siehe _discover_ai_models.
+    # Discover available AI models in the background (stable fallbacks
+    # until discovery completes) — see _discover_ai_models.
     if ai_key:
         hass.async_create_task(_discover_ai_models(hass, ai_key, ai_base))
 
     await _async_register_card(hass)
 
-    # ── WebSocket : reconnaissance photo / texte ─────────────────────────────
+    # ── WebSocket: photo / text recognition ───────────────────────────────────
 
     @websocket_api.websocket_command({
         vol.Required("type"):      "whiskydb/analyze_photo",
@@ -957,7 +954,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     websocket_api.async_register_command(hass, ws_search_whisky)
 
-    # ── WebSocket : get_data (chargement complet côté carte) ──────────────────
+    # ── WebSocket: get_data (full load for the card) ───────────────────────────
 
     @websocket_api.websocket_command({vol.Required("type"): "whiskydb/get_data"})
     @websocket_api.async_response
@@ -984,7 +981,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     def _find_whisky(d: dict, whisky_id: str) -> dict | None:
         return next((w for w in d.get("whiskies", []) if w["id"] == whisky_id), None)
 
-    # ── Casiers ───────────────────────────────────────────────────────────────
+    # ── Racks ──────────────────────────────────────────────────────────────────
 
     async def svc_add_rack(call: ServiceCall) -> None:
         d = _get()
@@ -994,7 +991,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         levels = max(1, min(4, int(call.data.get("levels", 1))))
         rack = {
             "id":      _uid(),
-            "name":    call.data.get("name", f"Regal {len(cellar['racks']) + 1}"),
+            "name":    call.data.get("name", f"Rack {len(cellar['racks']) + 1}"),
             "columns": cols, "shelves": shelves, "levels": levels,
             "slots":   cols * shelves * levels,
         }
@@ -1014,7 +1011,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 r["slots"] = _rack_capacity(r)
                 break
         else:
-            raise HomeAssistantError(f"Regal nicht gefunden: {rid}")
+            raise HomeAssistantError(f"Rack not found: {rid}")
         await _persist(d)
 
     async def svc_remove_rack(call: ServiceCall) -> None:
@@ -1024,25 +1021,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             c["racks"] = [r for r in c["racks"] if r["id"] != rid]
         for w in d["whiskies"]:
             w["slots"] = [s for s in w["slots"] if s["rack_id"] != rid]
-        # Une fiche sans emplacement n'est PAS supprimée automatiquement pour le
-        # whisky (contrairement au fork vin) : une bouteille "finished" peut
-        # légitimement n'avoir plus d'emplacement occupé pertinent tout en
-        # restant un historique de dégustation valide. Seul remove_whisky retire
-        # une fiche.
+        # A record without a slot is NOT deleted automatically (unlike the
+        # wine fork): a "finished" bottle can legitimately have no relevant
+        # occupied slot while remaining a valid tasting history. Only
+        # remove_whisky deletes a record.
         await _persist(d)
 
-    # ── Caves / armoires ──────────────────────────────────────────────────────
+    # ── Collections ────────────────────────────────────────────────────────────
 
     async def svc_add_cellar(call: ServiceCall) -> None:
         d = _get()
         cs = _cellars(d)
-        cs.append({"id": _uid(), "name": call.data.get("name", f"Sammlung {len(cs) + 1}"), "racks": []})
+        cs.append({"id": _uid(), "name": call.data.get("name", f"Collection {len(cs) + 1}"), "racks": []})
         await _persist(d)
 
     async def svc_rename_cellar(call: ServiceCall) -> None:
         d = _get()
         cellar = _cellar(d, call.data.get("cellar_id"))
-        cellar["name"] = call.data.get("name", "Sammlung")
+        cellar["name"] = call.data.get("name", "Collection")
         await _persist(d)
 
     async def svc_remove_cellar(call: ServiceCall) -> None:
@@ -1051,32 +1047,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         cs = _cellars(d)
         target = next((c for c in cs if c.get("id") == cid), None)
         if not target:
-            raise HomeAssistantError(f"Sammlung nicht gefunden: {cid}")
+            raise HomeAssistantError(f"Collection not found: {cid}")
         if len(cs) <= 1:
-            raise HomeAssistantError("Die letzte Sammlung kann nicht gelöscht werden.")
+            raise HomeAssistantError("The last collection cannot be deleted.")
         if target.get("racks"):
             raise HomeAssistantError(
-                "Diese Sammlung enthält noch Regale — bitte zuerst verschieben oder entfernen."
+                "This collection still contains racks — move or remove them first."
             )
         d["cellars"] = [c for c in cs if c.get("id") != cid]
         await _persist(d)
 
-    # ── Fiches whisky ─────────────────────────────────────────────────────────
+    # ── Whisky records ─────────────────────────────────────────────────────────
 
     async def svc_add_whisky(call: ServiceCall) -> None:
-        """Crée une nouvelle fiche whisky.
+        """Creates a new whisky record.
 
-        Deux modes de placement, non combinables dans un même appel :
-        - rack_id fourni : UN exemplaire précisément placé (slot).
-        - rack_id absent : `quantity` exemplaires SANS emplacement assigné
-          (rack_id=""), tous au statut `initial_status` — c'est le chemin
-          emprunté par le formulaire v1 de la carte (commit 6), qui ne
-          propose pas encore de sélecteur d'étagère.
+        Two placement modes, not combinable in one call:
+        - rack_id given: ONE bottle placed at a precise slot.
+        - rack_id absent: `quantity` bottles WITHOUT an assigned slot
+          (rack_id=""), all with status `initial_status` — this is the
+          path taken by the card's v1 form (commit 6), which does
+          not offer a rack selector yet.
         """
         d = _get()
         name = str(call.data.get("name", "")).strip()
         if not name:
-            raise HomeAssistantError("Der Name des Whiskys ist erforderlich.")
+            raise HomeAssistantError("The whisky name is required.")
         initial_status = call.data.get("initial_status", "sealed")
         if initial_status not in BOTTLE_STATUS_VALUES:
             initial_status = "sealed"
@@ -1084,7 +1080,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if rack_id:
             slot = int(call.data.get("slot", 0))
             if _slot_taken(d, rack_id, slot):
-                raise HomeAssistantError(f"Platz Nr. {slot + 1} ist in diesem Regal bereits belegt.")
+                raise HomeAssistantError(f"Slot No. {slot + 1} in this rack is already occupied.")
             slots = [_mk_slot(rack_id, slot, call.data.get("slot_comment"), bottle_status=initial_status)]
         else:
             qty = max(1, int(call.data.get("quantity", 1)))
@@ -1097,12 +1093,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.bus.async_fire(f"{DOMAIN}_bottle_added", {"whisky_id": record["id"], "name": name})
 
     async def svc_update_whisky(call: ServiceCall) -> None:
-        """Met à jour les métadonnées d'une fiche whisky (champs communs + whisky_meta)."""
+        """Updates a whisky record's metadata (common fields + whisky_meta)."""
         d = _get()
         whisky_id = call.data["whisky_id"]
         w = _find_whisky(d, whisky_id)
         if not w:
-            raise HomeAssistantError(f"Whisky nicht gefunden: {whisky_id}")
+            raise HomeAssistantError(f"Whisky not found: {whisky_id}")
         if "name" in call.data:
             w["name"] = str(call.data["name"]).strip() or w["name"]
         for k in COMMON_FIELDS:
@@ -1114,36 +1110,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _persist(d)
 
     async def svc_remove_whisky(call: ServiceCall) -> None:
-        """Supprime une fiche whisky et tous ses emplacements."""
+        """Deletes a whisky record and all of its slots."""
         d = _get()
         d["whiskies"] = [w for w in d["whiskies"] if w["id"] != call.data["whisky_id"]]
         await _persist(d)
 
-    # ── Emplacements (bouteilles physiques) ──────────────────────────────────
+    # ── Slots (physical bottles) ──────────────────────────────────────────────
 
     async def svc_add_slot(call: ServiceCall) -> None:
-        """Ajoute un exemplaire physique à une fiche whisky existante."""
+        """Adds a physical bottle to an existing whisky record."""
         d = _get()
         whisky_id = call.data["whisky_id"]
         rack_id = _call_rack_id(call)
         slot = int(call.data.get("slot", 0))
         if _slot_taken(d, rack_id, slot):
-            raise HomeAssistantError(f"Platz Nr. {slot + 1} ist in diesem Regal bereits belegt.")
+            raise HomeAssistantError(f"Slot No. {slot + 1} in this rack is already occupied.")
         w = _find_whisky(d, whisky_id)
         if not w:
-            raise HomeAssistantError(f"Whisky nicht gefunden: {whisky_id}")
+            raise HomeAssistantError(f"Whisky not found: {whisky_id}")
         w["slots"].append(_mk_slot(rack_id, slot, call.data.get("comment"), call.data.get("size")))
         await _persist(d)
 
     async def svc_update_slot(call: ServiceCall) -> None:
-        """Modifie le format ou le commentaire d'un exemplaire, sans le déplacer."""
+        """Changes a bottle's format or comment without moving it."""
         d = _get()
         w = _find_whisky(d, call.data["whisky_id"])
         if not w:
-            raise HomeAssistantError(f"Whisky nicht gefunden: {call.data['whisky_id']}")
+            raise HomeAssistantError(f"Whisky not found: {call.data['whisky_id']}")
         slot_idx = int(call.data.get("slot_idx", 0))
         if slot_idx >= len(w["slots"]):
-            raise HomeAssistantError(f"Ungültiger Platz-Index {slot_idx} für diesen Whisky.")
+            raise HomeAssistantError(f"Invalid slot index {slot_idx} for this whisky.")
         s = w["slots"][slot_idx]
         for k in ("size", "comment"):
             if k in call.data:
@@ -1155,51 +1151,51 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _persist(d)
 
     async def svc_move_slot(call: ServiceCall) -> None:
-        """Déplace un exemplaire vers une autre étagère/emplacement."""
+        """Moves a bottle to another rack/slot."""
         d = _get()
         whisky_id = call.data["whisky_id"]
         slot_idx = int(call.data.get("slot_idx", 0))
         new_rack = _call_rack_id(call)
         new_slot = int(call.data.get("slot", 0))
         if _slot_taken(d, new_rack, new_slot, exclude_whisky_id=whisky_id, exclude_slot_idx=slot_idx):
-            raise HomeAssistantError(f"Platz Nr. {new_slot + 1} ist in diesem Regal bereits belegt.")
+            raise HomeAssistantError(f"Slot No. {new_slot + 1} in this rack is already occupied.")
         w = _find_whisky(d, whisky_id)
         if not w:
-            raise HomeAssistantError(f"Whisky nicht gefunden: {whisky_id}")
+            raise HomeAssistantError(f"Whisky not found: {whisky_id}")
         if slot_idx >= len(w["slots"]):
-            raise HomeAssistantError(f"Ungültiger Platz-Index {slot_idx} für diesen Whisky.")
+            raise HomeAssistantError(f"Invalid slot index {slot_idx} for this whisky.")
         w["slots"][slot_idx] = {**w["slots"][slot_idx], "rack_id": new_rack, "slot": new_slot}
         await _persist(d)
 
     async def svc_remove_slot(call: ServiceCall) -> None:
-        """Retire UN exemplaire. Supprime la fiche si c'était le dernier emplacement."""
+        """Removes ONE bottle. Deletes the record if this was its last slot."""
         d = _get()
         w = _find_whisky(d, call.data["whisky_id"])
         if not w:
-            raise HomeAssistantError(f"Whisky nicht gefunden: {call.data['whisky_id']}")
+            raise HomeAssistantError(f"Whisky not found: {call.data['whisky_id']}")
         slot_idx = int(call.data.get("slot_idx", 0))
         if slot_idx >= len(w["slots"]):
-            raise HomeAssistantError(f"Ungültiger Platz-Index {slot_idx} für diesen Whisky.")
+            raise HomeAssistantError(f"Invalid slot index {slot_idx} for this whisky.")
         if len(w["slots"]) <= 1:
             d["whiskies"].remove(w)
         else:
             w["slots"].pop(slot_idx)
         await _persist(d)
 
-    # ── Cycle de vie d'une bouteille : sealed → opened → finished ────────────
+    # ── Bottle lifecycle: sealed → opened → finished ───────────────────────────
 
     async def svc_open_bottle(call: ServiceCall) -> None:
-        """Marque un exemplaire comme ouvert (sealed → opened)."""
+        """Marks a bottle as opened (sealed → opened)."""
         d = _get()
         w = _find_whisky(d, call.data["whisky_id"])
         if not w:
-            raise HomeAssistantError(f"Whisky nicht gefunden: {call.data['whisky_id']}")
+            raise HomeAssistantError(f"Whisky not found: {call.data['whisky_id']}")
         slot_idx = int(call.data.get("slot_idx", 0))
         if slot_idx >= len(w["slots"]):
-            raise HomeAssistantError(f"Ungültiger Platz-Index {slot_idx} für diesen Whisky.")
+            raise HomeAssistantError(f"Invalid slot index {slot_idx} for this whisky.")
         s = w["slots"][slot_idx]
         if s.get("bottle_status", "sealed") != "sealed":
-            raise HomeAssistantError("Diese Flasche ist nicht mehr versiegelt.")
+            raise HomeAssistantError("This bottle is no longer sealed.")
         s["bottle_status"] = "opened"
         s["opened_date"] = call.data.get("opened_date") or datetime.now().strftime("%Y-%m-%d")
         s["remaining_percent"] = 100
@@ -1209,20 +1205,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         })
 
     async def svc_finish_bottle(call: ServiceCall) -> None:
-        """Marque un exemplaire comme terminé (opened → finished).
+        """Marks a bottle as finished (opened → finished).
 
-        Contrairement à Millésime (drink_bottle), l'emplacement N'EST PAS
-        supprimé : "finished" est un état de fiche à part entière (brief §2,
-        bottle_status), pas une suppression — l'historique de la bouteille
-        reste consultable. Note/commentaire optionnels archivés sur l'emplacement.
+        Unlike Millésime (drink_bottle), the slot is NOT deleted:
+        "finished" is a proper record state (see bottle_status), not a
+        deletion — the bottle's history stays viewable. Optional
+        note/comment archived on the slot.
         """
         d = _get()
         w = _find_whisky(d, call.data["whisky_id"])
         if not w:
-            raise HomeAssistantError(f"Whisky nicht gefunden: {call.data['whisky_id']}")
+            raise HomeAssistantError(f"Whisky not found: {call.data['whisky_id']}")
         slot_idx = int(call.data.get("slot_idx", 0))
         if slot_idx >= len(w["slots"]):
-            raise HomeAssistantError(f"Ungültiger Platz-Index {slot_idx} für diesen Whisky.")
+            raise HomeAssistantError(f"Invalid slot index {slot_idx} for this whisky.")
         s = w["slots"][slot_idx]
         s["bottle_status"] = "finished"
         s["remaining_percent"] = 0
@@ -1242,31 +1238,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         })
 
     async def svc_update_remaining(call: ServiceCall) -> None:
-        """Met à jour le niveau restant (%) d'un exemplaire OUVERT.
+        """Updates the remaining level (%) of an OPENED bottle.
 
-        Permet un suivi manuel (pesée, estimation visuelle) entre l'ouverture
-        (100%, fixé par open_bottle) et la fin (0%, fixé par finish_bottle).
-        Déclenche whisky_bottle_low UNIQUEMENT au franchissement du seuil bas
-        (front descendant : la valeur PRÉCÉDENTE était au-dessus du seuil, la
-        NOUVELLE est à ou en dessous) — pas à chaque appel, pour rester
-        directement utilisable dans une automatisation sans déclenchement
-        répété à chaque mise à jour (brief §11 : services prêts pour
-        l'automatisation).
+        Allows manual tracking (weighing, visual estimate) between opening
+        (100%, set by open_bottle) and finishing (0%, set by finish_bottle).
+        Fires whiskydb_bottle_low ONLY when the low threshold is crossed
+        (falling edge: the PREVIOUS value was above the threshold, the NEW
+        one is at or below) — not on every call, so it stays directly
+        usable in an automation without repeated triggering on every
+        update.
         """
         d = _get()
         w = _find_whisky(d, call.data["whisky_id"])
         if not w:
-            raise HomeAssistantError(f"Whisky nicht gefunden: {call.data['whisky_id']}")
+            raise HomeAssistantError(f"Whisky not found: {call.data['whisky_id']}")
         slot_idx = int(call.data.get("slot_idx", 0))
         if slot_idx >= len(w["slots"]):
-            raise HomeAssistantError(f"Ungültiger Platz-Index {slot_idx} für diesen Whisky.")
+            raise HomeAssistantError(f"Invalid slot index {slot_idx} for this whisky.")
         s = w["slots"][slot_idx]
         if s.get("bottle_status", "sealed") != "opened":
-            raise HomeAssistantError("Nur ein geöffnetes Exemplar hat einen Füllstand zum Nachverfolgen.")
+            raise HomeAssistantError("Only an opened bottle has a fill level to track.")
         try:
             raw_pct = float(str(call.data["remaining_percent"]).replace(",", "."))
         except (KeyError, TypeError, ValueError):
-            raise HomeAssistantError("remaining_percent muss eine Zahl zwischen 0 und 100 sein.")
+            raise HomeAssistantError("remaining_percent must be a number between 0 and 100.")
         pct = max(0, min(100, round(raw_pct)))
         threshold = max(0, min(100, int(call.data.get("low_threshold", 20))))
         previous = s.get("remaining_percent")
@@ -1280,20 +1275,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             })
 
     async def svc_add_tasting(call: ServiceCall) -> None:
-        """Ajoute une dégustation SANS lien avec la collection.
+        """Adds a tasting NOT linked to the collection.
 
-        Contrairement à finish_bottle (qui clôt un exemplaire réellement
-        possédé), cette entrée sert à noter un whisky simplement GOÛTÉ —
-        chez un ami, en bar, lors d'une dégustation — sans jamais avoir
-        possédé de bouteille. Alimente le même onglet "Whisky bu" côté
-        carte, mais dans une liste séparée (tasting_log), jamais dans
-        whiskies[] : aucun impact sur les capteurs de collection
-        (sensor.whisky_total, whisky_collection_value, etc.).
+        Unlike finish_bottle (which closes a bottle you actually owned),
+        this entry records a whisky you merely TASTED — at a friend's
+        place, at a bar, at a tasting — without ever owning a bottle.
+        Feeds the same "Drunk" tab in the card, but in a separate list
+        (tasting_log), never in whiskies[]: no impact on the collection
+        sensors (sensor.whiskydb_total, whiskydb_collection_value, etc.).
         """
         d = _get()
         name = str(call.data.get("name", "")).strip()
         if not name:
-            raise HomeAssistantError("Der Name des Whiskys ist erforderlich.")
+            raise HomeAssistantError("The whisky name is required.")
         rating = call.data.get("rating", 0)
         try:
             rating = round(float(str(rating).replace(",", ".")), 1)
@@ -1313,13 +1307,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         }
         log = d.setdefault("tasting_log", [])
         log.append(entry)
-        # Garder les 1000 dernières dégustations (même limite que Millésime).
+        # Keep the last 1000 tastings (same limit as Millésime).
         d["tasting_log"] = log[-1000:]
         await _persist(d)
         hass.bus.async_fire(f"{DOMAIN}_tasting_added", {"tasting_id": entry["id"], "name": name})
 
     async def svc_remove_tasting(call: ServiceCall) -> None:
-        """Supprime une entrée du journal de dégustation (whisky goûté hors collection)."""
+        """Deletes an entry from the tasting diary (whisky tasted outside the collection)."""
         d = _get()
         tid = call.data["tasting_id"]
         d["tasting_log"] = [t for t in d.get("tasting_log", []) if t.get("id") != tid]
@@ -1344,7 +1338,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_register(DOMAIN, "add_tasting",    svc_add_tasting)
     hass.services.async_register(DOMAIN, "remove_tasting", svc_remove_tasting)
 
-    _LOGGER.info("WhiskyDB v%s gestartet (%d Einträge)", VERSION, len(data.get("whiskies", [])))
+    _LOGGER.info("WhiskyDB v%s started (%d entries)", VERSION, len(data.get("whiskies", [])))
     return True
 
 
@@ -1353,7 +1347,7 @@ async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> Non
     new_base = ((entry.options.get("ai_base_url") or "").strip() or AI_BASE_URL_DEFAULT).rstrip("/")
     hass.data[DOMAIN][entry.entry_id]["ai_key"] = new_key
     hass.data[DOMAIN][entry.entry_id]["ai_base_url"] = new_base
-    # Key oder Endpunkt geändert → verfügbare Modelle neu entdecken
+    # Key or endpoint changed → re-discover available models
     _AI_MODELS["text"] = _AI_MODELS["vision"] = None
     _AI_MODELS["discovered"] = False
     if new_key:

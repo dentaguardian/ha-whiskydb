@@ -2,43 +2,43 @@
   "config": {
     "step": {
       "user": {
-        "title": "WhiskyDB — Sammlung",
-        "description": "Willkommen! Richte hier deine Whisky-Sammlung ein.",
+        "title": "WhiskyDB — Collection",
+        "description": "Welcome! Set up your whisky collection here.",
         "data": {
-          "collection_name": "Name der Sammlung",
-          "ai_api_key": "API-Key (optional)",
-          "ai_base_url": "KI-Endpunkt (optional)"
+          "collection_name": "Collection name",
+          "ai_api_key": "API key (optional)",
+          "ai_base_url": "AI endpoint (optional)"
         },
         "data_description": {
-          "ai_api_key": "Kostenloser Key auf console.mistral.ai (Abschnitt „API Keys“). Ohne Key: nur manuelle Eingabe, keine Etikett-Erkennung.",
-          "ai_base_url": "Standard: https://api.mistral.ai/v1 (Mistral). Alternativ z. B. Ollama (http://localhost:11434/v1), LM Studio oder OpenRouter."
+          "ai_api_key": "Free key on console.mistral.ai (section “API Keys”). Without a key: manual entry only, no label recognition.",
+          "ai_base_url": "Default: https://api.mistral.ai/v1 (Mistral). Alternatives: Ollama (http://localhost:11434/v1), LM Studio or OpenRouter."
         }
       }
     },
     "error": {
-      "invalid_key": "Ungültiges Format — der API-Key darf keine Leerzeichen enthalten und muss mindestens 20 Zeichen lang sein"
+      "invalid_key": "Invalid format — the API key must not contain spaces and must be at least 20 characters long"
     },
     "abort": {
-      "already_configured": "WhiskyDB ist bereits eingerichtet."
+      "already_configured": "WhiskyDB is already set up."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "WhiskyDB-Einstellungen",
-        "description": "API-Key oder KI-Endpunkt aktualisieren.",
+        "title": "WhiskyDB settings",
+        "description": "Update the API key or AI endpoint.",
         "data": {
-          "ai_api_key": "API-Key",
-          "ai_base_url": "KI-Endpunkt"
+          "ai_api_key": "API key",
+          "ai_base_url": "AI endpoint"
         },
         "data_description": {
-          "ai_api_key": "Neuen Key auf console.mistral.ai erstellen. Leer lassen für reine manuelle Eingabe.",
-          "ai_base_url": "Standard: https://api.mistral.ai/v1 (Mistral). Für lokale Modelle z. B. http://localhost:11434/v1 (Ollama)."
+          "ai_api_key": "Create a new key on console.mistral.ai. Leave empty for manual entry only.",
+          "ai_base_url": "Default: https://api.mistral.ai/v1 (Mistral). For local models e.g. http://localhost:11434/v1 (Ollama)."
         }
       }
     },
     "error": {
-      "invalid_key": "Ungültiges Format — der API-Key darf keine Leerzeichen enthalten und muss mindestens 20 Zeichen lang sein"
+      "invalid_key": "Invalid format — the API key must not contain spaces and must be at least 20 characters long"
     }
   }
 }

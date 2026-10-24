@@ -1,7 +1,7 @@
-"""WhiskyDB-Konfigurationsflow v2.0.0.
+"""WhiskyDB config flow.
 
-Basiert auf dem Config-Flow von ha-whisky (Jérémie Silvent) und damit auf
-Millésime (Redsklns) — abgeleitete Projekte, siehe LICENSE.
+Based on the config flow of ha-whisky (Jérémie Silvent) and thus on
+Millésime (Redsklns) — derivative projects, see LICENSE.
 """
 from __future__ import annotations
 
@@ -13,19 +13,9 @@ from homeassistant.data_entry_flow import FlowResult
 
 from . import AI_BASE_URL_DEFAULT, DOMAIN
 
-AI_HELP = (
-    "Optional, aber empfohlen. Erstelle einen kostenlosen API-Key auf "
-    "https://console.mistral.ai/ (Abschnitt „API Keys“):\n"
-    "→ Key kopieren → unten einfügen.\n"
-    "Ohne Key: Whiskies nur manuell anlegen "
-    "(keine Etikett-Erkennung, keine KI-Suche).\n"
-    "Alternativer Endpunkt (Ollama, LM Studio, OpenRouter …) "
-    "im Feld „KI-Endpunkt“ angeben."
-)
-
 
 def _clean_key(raw: str | None) -> str:
-    """Bereinigt einen eingegebenen API-Key (Leerzeichen, mitkopierte Anführungszeichen)."""
+    """Cleans a pasted API key (whitespace, copied quotes)."""
     key = (raw or "").strip()
     if len(key) >= 2 and key[0] in "\"'" and key[-1] in "\"'":
         key = key[1:-1].strip()
@@ -33,14 +23,14 @@ def _clean_key(raw: str | None) -> str:
 
 
 def _clean_base(raw: str | None) -> str:
-    """Bereinigt die Endpunkt-URL (Leerzeichen, abschließenden Slash)."""
+    """Cleans the endpoint URL (whitespace, trailing slash)."""
     return ((raw or "").strip() or AI_BASE_URL_DEFAULT).rstrip("/")
 
 
 def _key_looks_invalid(key: str) -> bool:
-    """Lockere Prüfung: Der Key wird nur bei offensichtlichen Fehlern abgelehnt."""
+    """Lenient check: the key is only rejected on obvious errors."""
     if not key:
-        return False  # leer = kein Key, erlaubt (nur manuelle Eingabe)
+        return False  # empty = no key, allowed (manual entry only)
     if any(c.isspace() for c in key):
         return True
     if len(key) < 20:
@@ -49,14 +39,14 @@ def _key_looks_invalid(key: str) -> bool:
 
 
 class WhiskyDBConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Konfigurationsflow für WhiskyDB."""
+    """Config flow for WhiskyDB."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Erster Einrichtungsschritt."""
+        """First setup step."""
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
 
@@ -82,17 +72,16 @@ class WhiskyDBConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional("ai_api_key", default=""): str,
                 vol.Optional("ai_base_url", default=AI_BASE_URL_DEFAULT): str,
             }),
-            description_placeholders={"ai_help": AI_HELP},
         )
 
     @staticmethod
     def async_get_options_flow(config_entry):
-        """Gibt den Options-Flow zurück (Key/Endpunkt nach der Installation ändern)."""
+        """Returns the options flow (change key/endpoint after setup)."""
         return WhiskyDBOptionsFlow(config_entry)
 
 
 class WhiskyDBOptionsFlow(config_entries.OptionsFlow):
-    """Erlaubt das Ändern von API-Key und KI-Endpunkt nach der Installation."""
+    """Allows changing the API key and AI endpoint after setup."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         self._config_entry = config_entry
@@ -131,5 +120,4 @@ class WhiskyDBOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional("ai_api_key", default=current_key): str,
                 vol.Optional("ai_base_url", default=current_base): str,
             }),
-            description_placeholders={"ai_help": AI_HELP},
         )

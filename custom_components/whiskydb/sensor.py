@@ -1,23 +1,23 @@
-"""Capteurs Whisky — v1.0.0.
+"""WhiskyDB sensors — seven global sensors.
 
-Sept capteurs globaux, conformes au brief §9 :
-  sensor.whiskydb_total              nombre total de bouteilles (exemplaires physiques)
-  sensor.whiskydb_opened             bouteilles ouvertes (+ attribut "bottles" :
-                                    détail par exemplaire ouvert avec ancienneté
-                                    d'ouverture, pour les automatisations — commit 9)
-  sensor.whiskydb_sealed             bouteilles scellées
-  sensor.whiskydb_finished           bouteilles terminées
-  sensor.whiskydb_distilleries       nombre de distilleries distinctes représentées
-  sensor.whiskydb_collection_value   valeur du STOCK RESTANT (sealed+opened ; les
-                                    bouteilles "finished" n'ont plus de valeur
-                                    résiduelle, elles sont exclues du total)
-  sensor.whiskydb_average_age        âge moyen (années), par FICHE (pas pondéré
-                                    par nombre d'exemplaires), fiches sans âge
-                                    numérique renseigné ignorées
+  sensor.whiskydb_total              total number of bottles (physical copies)
+  sensor.whiskydb_opened             opened bottles (+ "bottles" attribute:
+                                     per-bottle detail with days open, for
+                                     automations)
+  sensor.whiskydb_sealed             sealed bottles
+  sensor.whiskydb_finished           finished bottles
+  sensor.whiskydb_distilleries       number of distinct distilleries represented
+  sensor.whiskydb_collection_value    value of the REMAINING STOCK (sealed +
+                                     opened; "finished" bottles have no
+                                     residual value and are excluded from the
+                                     total)
+  sensor.whiskydb_average_age         average age (years), per RECORD (not
+                                     weighted by bottle count); records
+                                     without a numeric age are ignored
 
-Pas de capteurs par collection pour l'instant (une seule collection dans la
-plupart des installations) — pourra être ajouté plus tard sur le modèle
-multi-caves de Millésime si le besoin se présente.
+No per-collection sensors for now (most installations use a single
+collection) — can be added later, following Millésime's multi-cellar model,
+if the need arises.
 """
 from __future__ import annotations
 
@@ -30,10 +30,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import DOMAIN
 
-# Nombre maximum de clés détaillées par attribut de répartition (pays, région,
-# distillerie, type, tourbe) — évite un état/attribut disproportionné sur une
-# très grosse collection ; au-delà, seules les valeurs les plus représentées
-# sont conservées (bonne pratique HA sur la taille des attributs).
+# Maximum number of detail keys per breakdown attribute (country, region,
+# distillery, type, peat) — avoids a disproportionate state/attribute size on
+# very large collections; beyond this, only the most represented values are
+# kept (HA best practice on attribute size).
 _MAX_BREAKDOWN_KEYS = 25
 
 
@@ -42,7 +42,7 @@ def _whiskies(data: dict) -> list[dict]:
 
 
 def _all_slots(data: dict) -> list[tuple[dict, dict]]:
-    """(whisky, slot) pour chaque exemplaire physique, toutes fiches confondues."""
+    """(whisky, slot) for each physical bottle, across all records."""
     return [(w, s) for w in _whiskies(data) for s in w.get("slots", [])]
 
 
@@ -51,7 +51,7 @@ def _count_by_status(data: dict, status: str) -> int:
 
 
 def _breakdown(data: dict, key_fn) -> dict[str, int]:
-    """Répartition {clé: nombre de bouteilles}, triée par fréquence, bornée."""
+    """Breakdown {key: bottle count}, sorted by frequency, bounded."""
     counts: dict[str, int] = {}
     for w in _whiskies(data):
         key = key_fn(w)
@@ -64,16 +64,16 @@ def _breakdown(data: dict, key_fn) -> dict[str, int]:
 
 
 def _opened_bottles(data: dict) -> list[dict]:
-    """Détail des exemplaires actuellement OUVERTS, avec ancienneté d'ouverture.
+    """Detail of the currently OPENED bottles, with days open.
 
-    Exposé en attribut de sensor.whiskydb_opened (pas en entité par bouteille,
-    pour ne pas faire exploser le nombre d'entités sur une grosse collection)
-    afin de permettre des automatisations basées sur la durée d'ouverture —
-    ex. brief §11 : "notifie-moi si une bouteille ouverte depuis plus de 6
-    mois n'est toujours pas terminée" via un template Jinja lisant
-    state_attr('sensor.whiskydb_geoeffnet', 'bottles') | selectattr('days_open', 'gt', 180).
-    Triée par ancienneté décroissante (les plus vieilles bouteilles ouvertes
-    en premier, cas d'usage le plus courant).
+    Exposed as an attribute of sensor.whiskydb_opened (not as one entity per
+    bottle, to keep the entity count manageable on large collections) to
+    enable automations based on how long a bottle has been open — e.g.
+    "notify me if a bottle opened more than 6 months ago is still not
+    finished" via a Jinja template reading
+    state_attr('sensor.whiskydb_opened', 'bottles') |
+    selectattr('days_open', 'gt', 180).
+    Sorted by age, oldest first (the most common use case).
     """
     today = date.today()
     out: list[dict] = []
@@ -129,7 +129,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Initialise les sept capteurs globaux Whisky."""
+    """Sets up the seven global WhiskyDB sensors."""
     entry_data = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
         WhiskyTotalSensor(hass, entry, entry_data),
@@ -143,14 +143,14 @@ async def async_setup_entry(
 
 
 class WhiskyBaseSensor(SensorEntity):
-    """Capteur de base Whisky : se met à jour sur l'événement whisky_updated.
+    """Base WhiskyDB sensor: updates on the whisky_updated event.
 
-    Chaque sous-classe fixe explicitement `self.entity_id` (en plus de
-    `_attr_unique_id`) : sans cela, Home Assistant dérive l'entity_id du nom
-    AFFICHÉ (traduit via _attr_translation_key depuis translations/), pas de
-    l'unique_id — ce qui donnerait `sensor.whiskydb_valeur_de_la_collection`
-    au lieu de `sensor.whiskydb_collection_value` attendu par le brief (§9) et
-    utilisé dans toute la documentation/les automatisations d'exemple.
+    Each subclass explicitly sets `self.entity_id` (in addition to
+    `_attr_unique_id`): without this, Home Assistant derives the entity_id
+    from the DISPLAYED name (translated via _attr_translation_key from
+    translations/), not from the unique_id — which would yield a translated
+    entity_id instead of the stable `sensor.whiskydb_collection_value` used
+    throughout the documentation and the example automations.
     """
 
     _attr_should_poll = False
@@ -176,10 +176,10 @@ class WhiskyBaseSensor(SensorEntity):
 
 
 class WhiskyTotalSensor(WhiskyBaseSensor):
-    """Nombre total de bouteilles (exemplaires physiques), tous statuts confondus."""
+    """Total number of bottles (physical copies), across all statuses."""
 
     _attr_icon = "mdi:bottle-tonic"
-    _attr_native_unit_of_measurement = "Flaschen"
+    _attr_native_unit_of_measurement = "bottles"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -196,23 +196,23 @@ class WhiskyTotalSensor(WhiskyBaseSensor):
         d = self._data
         return {
             "references": len(_whiskies(d)),
-            "nach_land":       _breakdown(d, lambda w: (w.get("whisky_meta") or {}).get("country", "")),
-            "nach_region":     _breakdown(d, lambda w: (w.get("whisky_meta") or {}).get("region", "")),
-            "nach_destillerie":_breakdown(d, lambda w: (w.get("whisky_meta") or {}).get("distillery", "")),
-            "nach_typ":       _breakdown(d, lambda w: (w.get("whisky_meta") or {}).get("whisky_type", "")),
-            "torfigkeit":     _breakdown(d, lambda w: (
-                "torfig" if (w.get("whisky_meta") or {}).get("peated") is True
-                else "nicht torfig" if (w.get("whisky_meta") or {}).get("peated") is False
-                else "nicht angegeben"
+            "by_country":    _breakdown(d, lambda w: (w.get("whisky_meta") or {}).get("country", "")),
+            "by_region":     _breakdown(d, lambda w: (w.get("whisky_meta") or {}).get("region", "")),
+            "by_distillery": _breakdown(d, lambda w: (w.get("whisky_meta") or {}).get("distillery", "")),
+            "by_type":       _breakdown(d, lambda w: (w.get("whisky_meta") or {}).get("whisky_type", "")),
+            "by_peat":       _breakdown(d, lambda w: (
+                "peated" if (w.get("whisky_meta") or {}).get("peated") is True
+                else "not peated" if (w.get("whisky_meta") or {}).get("peated") is False
+                else "unspecified"
             )),
         }
 
 
 class WhiskyOpenedSensor(WhiskyBaseSensor):
-    """Nombre de bouteilles ouvertes."""
+    """Number of opened bottles."""
 
     _attr_icon = "mdi:bottle-tonic-outline"
-    _attr_native_unit_of_measurement = "Flaschen"
+    _attr_native_unit_of_measurement = "bottles"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -230,10 +230,10 @@ class WhiskyOpenedSensor(WhiskyBaseSensor):
 
 
 class WhiskySealedSensor(WhiskyBaseSensor):
-    """Nombre de bouteilles scellées (jamais ouvertes)."""
+    """Number of sealed bottles (never opened)."""
 
     _attr_icon = "mdi:bottle-tonic-plus"
-    _attr_native_unit_of_measurement = "Flaschen"
+    _attr_native_unit_of_measurement = "bottles"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -247,10 +247,10 @@ class WhiskySealedSensor(WhiskyBaseSensor):
 
 
 class WhiskyFinishedSensor(WhiskyBaseSensor):
-    """Nombre de bouteilles terminées."""
+    """Number of finished bottles."""
 
     _attr_icon = "mdi:bottle-tonic-skull"
-    _attr_native_unit_of_measurement = "Flaschen"
+    _attr_native_unit_of_measurement = "bottles"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -264,7 +264,7 @@ class WhiskyFinishedSensor(WhiskyBaseSensor):
 
 
 class WhiskyDistilleriesSensor(WhiskyBaseSensor):
-    """Nombre de distilleries distinctes représentées dans la collection."""
+    """Number of distinct distilleries represented in the collection."""
 
     _attr_icon = "mdi:factory"
 
@@ -285,7 +285,7 @@ class WhiskyDistilleriesSensor(WhiskyBaseSensor):
 
 
 class WhiskyCollectionValueSensor(WhiskyBaseSensor):
-    """Valeur du stock restant (bouteilles scellées + ouvertes, hors terminées)."""
+    """Value of the remaining stock (sealed + opened bottles, finished excluded)."""
 
     _attr_icon = "mdi:currency-eur"
     _attr_native_unit_of_measurement = "€"
@@ -305,14 +305,14 @@ class WhiskyCollectionValueSensor(WhiskyBaseSensor):
         d = self._data
         n = len(_whiskies(d))
         avg = round(self.native_value / n, 2) if n else 0.0
-        return {"durchschnittspreis": avg}
+        return {"average_price": avg}
 
 
 class WhiskyAverageAgeSensor(WhiskyBaseSensor):
-    """Âge moyen des whiskies de la collection (par fiche, années déclarées uniquement)."""
+    """Average age of the collection's whiskies (per record, declared years only)."""
 
     _attr_icon = "mdi:calendar-clock"
-    _attr_native_unit_of_measurement = "Jahre"
+    _attr_native_unit_of_measurement = "years"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

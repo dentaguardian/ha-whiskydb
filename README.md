@@ -45,7 +45,7 @@ Siehe [LICENSE](LICENSE) — alle ursprünglichen Urheber bleiben genannt.
 ### Variante B — HACS (Custom Repository)
 
 1. HACS → drei Punkte oben rechts → **Benutzerdefinierte Repositories**.
-2. `dentaguardian/ha-whiskydb` als Typ **Integration** hinzufufen.
+2. `dentaguardian/ha-whiskydb` als Typ **Integration** hinzufügen.
 3. WhiskyDB in HACS installieren, Home Assistant neu starten, dann Integration hinzufügen wie oben.
 
 > **Hinweis:** Schlägt der HACS-Download mit einem `aiohttp`-Fehler fehl

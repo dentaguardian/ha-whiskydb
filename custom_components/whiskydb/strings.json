@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WhiskyDB — Sammlung",
+        "description": "Willkommen! Richte hier deine Whisky-Sammlung ein.",
+        "data": {
+          "collection_name": "Name der Sammlung",
+          "ai_api_key": "API-Key (optional)",
+          "ai_base_url": "KI-Endpunkt (optional)"
+        },
+        "data_description": {
+          "ai_api_key": "Kostenloser Key auf console.mistral.ai (Abschnitt „API Keys“). Ohne Key: nur manuelle Eingabe, keine Etikett-Erkennung.",
+          "ai_base_url": "Standard: https://api.mistral.ai/v1 (Mistral). Alternativ z. B. Ollama (http://localhost:11434/v1), LM Studio oder OpenRouter."
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "Ungültiges Format — der API-Key darf keine Leerzeichen enthalten und muss mindestens 20 Zeichen lang sein"
+    },
+    "abort": {
+      "already_configured": "WhiskyDB ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "WhiskyDB-Einstellungen",
+        "description": "API-Key oder KI-Endpunkt aktualisieren.",
+        "data": {
+          "ai_api_key": "API-Key",
+          "ai_base_url": "KI-Endpunkt"
+        },
+        "data_description": {
+          "ai_api_key": "Neuen Key auf console.mistral.ai erstellen. Leer lassen für reine manuelle Eingabe.",
+          "ai_base_url": "Standard: https://api.mistral.ai/v1 (Mistral). Für lokale Modelle z. B. http://localhost:11434/v1 (Ollama)."
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "Ungültiges Format — der API-Key darf keine Leerzeichen enthalten und muss mindestens 20 Zeichen lang sein"
+    }
+  }
+}

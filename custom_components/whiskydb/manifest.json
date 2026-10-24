@@ -1,0 +1,20 @@
+{
+  "domain": "whiskydb",
+  "name": "WhiskyDB — Sammlung",
+  "after_dependencies": [
+    "recorder"
+  ],
+  "codeowners": [
+    "@dentaguardian"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http",
+    "websocket_api"
+  ],
+  "documentation": "https://github.com/dentaguardian/ha-whiskydb",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/dentaguardian/ha-whiskydb/issues",
+  "requirements": [],
+  "version": "2.0.0"
+}

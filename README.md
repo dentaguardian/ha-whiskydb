@@ -72,6 +72,26 @@ Bei der Einrichtung wählst du den Namen der Sammlung und optional:
 
 Beides lässt sich später jederzeit über *Konfigurieren* in den Integrationseinstellungen ändern.
 
+**KI-Antwortsprache:** Etikett-Erkennung und KI-Suche antworten automatisch in der
+Sprache, die in Home Assistant unter *Einstellungen → Allgemein → Sprache* gesetzt ist.
+
+## Sprachen
+
+WhiskyDB spricht 12 Sprachen — Konfigurationsdialog, Sensornamen und alle 18 Services
+richten sich automatisch nach deiner Home-Assistant-Sprache:
+
+| Sprache | Datei | Sprache | Datei |
+|---|---|---|---|
+| Deutsch | `de.json` | Chinesisch (traditionell) | `zh-Hant.json` |
+| Englisch | `en.json` | Japanisch | `ja.json` |
+| Französisch | `fr.json` | Koreanisch | `ko.json` |
+| Spanisch | `es.json` | Polnisch | `pl.json` |
+| Italienisch | `it.json` | Niederländisch | `nl.json` |
+| Chinesisch (vereinfacht) | `zh-Hans.json` | Portugiesisch (Brasilien) | `pt-BR.json` |
+
+Fehlt eine Sprache? Die Dateien liegen unter `custom_components/whiskydb/translations/` —
+einfach kopieren, übersetzen und per PR beitragen. 🙌
+
 ## Lovelace-Karte
 
 Die Karte wird automatisch als Ressource registriert — im Dashboard:

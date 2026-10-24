@@ -147,7 +147,7 @@ class WhiskyBaseSensor(SensorEntity):
 
     Chaque sous-classe fixe explicitement `self.entity_id` (en plus de
     `_attr_unique_id`) : sans cela, Home Assistant dérive l'entity_id du nom
-    AFFICHÉ (`_attr_name`, ex. "WhiskyDB Sammlungswert"), pas de
+    AFFICHÉ (traduit via _attr_translation_key depuis translations/), pas de
     l'unique_id — ce qui donnerait `sensor.whiskydb_valeur_de_la_collection`
     au lieu de `sensor.whiskydb_collection_value` attendu par le brief (§9) et
     utilisé dans toute la documentation/les automatisations d'exemple.
@@ -184,7 +184,7 @@ class WhiskyTotalSensor(WhiskyBaseSensor):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._attr_unique_id = f"{DOMAIN}_total"
-        self._attr_name = "WhiskyDB Flaschen gesamt"
+        self._attr_translation_key = f"{DOMAIN}_total"
         self.entity_id = f"sensor.{self._attr_unique_id}"
 
     @property
@@ -217,7 +217,7 @@ class WhiskyOpenedSensor(WhiskyBaseSensor):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._attr_unique_id = f"{DOMAIN}_opened"
-        self._attr_name = "WhiskyDB Geöffnet"
+        self._attr_translation_key = f"{DOMAIN}_opened"
         self.entity_id = f"sensor.{self._attr_unique_id}"
 
     @property
@@ -238,7 +238,7 @@ class WhiskySealedSensor(WhiskyBaseSensor):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._attr_unique_id = f"{DOMAIN}_sealed"
-        self._attr_name = "WhiskyDB Versiegelt"
+        self._attr_translation_key = f"{DOMAIN}_sealed"
         self.entity_id = f"sensor.{self._attr_unique_id}"
 
     @property
@@ -255,7 +255,7 @@ class WhiskyFinishedSensor(WhiskyBaseSensor):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._attr_unique_id = f"{DOMAIN}_finished"
-        self._attr_name = "WhiskyDB Leer"
+        self._attr_translation_key = f"{DOMAIN}_finished"
         self.entity_id = f"sensor.{self._attr_unique_id}"
 
     @property
@@ -271,7 +271,7 @@ class WhiskyDistilleriesSensor(WhiskyBaseSensor):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._attr_unique_id = f"{DOMAIN}_distilleries"
-        self._attr_name = "WhiskyDB Destillerien"
+        self._attr_translation_key = f"{DOMAIN}_distilleries"
         self.entity_id = f"sensor.{self._attr_unique_id}"
 
     @property
@@ -293,7 +293,7 @@ class WhiskyCollectionValueSensor(WhiskyBaseSensor):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._attr_unique_id = f"{DOMAIN}_collection_value"
-        self._attr_name = "WhiskyDB Sammlungswert"
+        self._attr_translation_key = f"{DOMAIN}_collection_value"
         self.entity_id = f"sensor.{self._attr_unique_id}"
 
     @property
@@ -317,7 +317,7 @@ class WhiskyAverageAgeSensor(WhiskyBaseSensor):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._attr_unique_id = f"{DOMAIN}_average_age"
-        self._attr_name = "WhiskyDB Durchschnittsalter"
+        self._attr_translation_key = f"{DOMAIN}_average_age"
         self.entity_id = f"sensor.{self._attr_unique_id}"
 
     @property

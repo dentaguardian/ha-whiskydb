@@ -1,0 +1,290 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WhiskyDB — Collectie",
+        "description": "Welkom! Stel hier je whiskycollectie in.",
+        "data": {
+          "collection_name": "Naam van de collectie",
+          "ai_api_key": "API-sleutel (optioneel)",
+          "ai_base_url": "AI-endpoint (optioneel)"
+        },
+        "data_description": {
+          "ai_api_key": "Gratis sleutel op console.mistral.ai (sectie “API Keys”). Zonder sleutel: alleen handmatige invoer, geen etiketherkenning.",
+          "ai_base_url": "Standaard: https://api.mistral.ai/v1 (Mistral). Alternatieven: Ollama (http://localhost:11434/v1), LM Studio of OpenRouter."
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "Ongeldig formaat — de API-sleutel mag geen spaties bevatten en moet minstens 20 tekens lang zijn"
+    },
+    "abort": {
+      "already_configured": "WhiskyDB is al ingesteld."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "WhiskyDB-instellingen",
+        "description": "Werk de API-sleutel of het AI-endpoint bij.",
+        "data": {
+          "ai_api_key": "API-sleutel",
+          "ai_base_url": "AI-endpoint"
+        },
+        "data_description": {
+          "ai_api_key": "Maak een nieuwe sleutel aan op console.mistral.ai. Laat leeg voor alleen handmatige invoer.",
+          "ai_base_url": "Standaard: https://api.mistral.ai/v1 (Mistral). Voor lokale modellen bijv. http://localhost:11434/v1 (Ollama)."
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "Ongeldig formaat — de API-sleutel mag geen spaties bevatten en moet minstens 20 tekens lang zijn"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "whiskydb_total": { "name": "WhiskyDB Totaal aantal flessen" },
+      "whiskydb_opened": { "name": "WhiskyDB Geopend" },
+      "whiskydb_sealed": { "name": "WhiskyDB verzegeld" },
+      "whiskydb_finished": { "name": "WhiskyDB Op" },
+      "whiskydb_distilleries": { "name": "WhiskyDB Distilleerderijen" },
+      "whiskydb_collection_value": { "name": "WhiskyDB Collectiewaarde" },
+      "whiskydb_average_age": { "name": "WhiskyDB Gemiddelde leeftijd" }
+    }
+  },
+  "services": {
+    "add_rack": {
+      "name": "Rek toevoegen",
+      "description": "Voegt een opslagrek binnen een collectie toe.",
+      "fields": {
+        "cellar_id": { "description": "ID van de collectie (optioneel, standaard de eerste)" },
+        "name": { "description": "Naam van het rek" },
+        "columns": { "description": "Aantal kolommen" },
+        "shelves": { "description": "Aantal planken" },
+        "levels": { "description": "Gestapelde niveaus (1 tot 4)" }
+      }
+    },
+    "update_rack": {
+      "name": "Rek bewerken",
+      "description": "Bewerkt een bestaand rek.",
+      "fields": {
+        "rack_id": { "description": "ID van het rek" },
+        "name": { "description": "Nieuwe naam" },
+        "columns": { "description": "Aantal kolommen" },
+        "shelves": { "description": "Aantal planken" },
+        "levels": { "description": "Gestapelde niveaus (1 tot 4)" }
+      }
+    },
+    "remove_rack": {
+      "name": "Rek verwijderen",
+      "description": "Verwijdert een rek. Flessen erin verliezen hun opslagplek, maar blijven in de collectie.",
+      "fields": {
+        "rack_id": { "description": "ID van het rek" }
+      }
+    },
+    "add_cellar": {
+      "name": "Collectie toevoegen",
+      "description": "Maakt een nieuwe, lege collectie (kast) aan in de instantie.",
+      "fields": {
+        "name": { "description": "Naam van de collectie" }
+      }
+    },
+    "rename_cellar": {
+      "name": "Collectie hernoemen",
+      "description": "Hernoemt een collectie (de eerste als cellar_id wordt weggelaten).",
+      "fields": {
+        "cellar_id": { "description": "ID van de collectie (optioneel)" },
+        "name": { "description": "Nieuwe naam" }
+      }
+    },
+    "remove_cellar": {
+      "name": "Collectie verwijderen",
+      "description": "Verwijdert een lege collectie (wordt geweigerd als ze rekken bevat of de laatste is).",
+      "fields": {
+        "cellar_id": { "description": "ID van de collectie" }
+      }
+    },
+    "add_whisky": {
+      "name": "Whisky toevoegen",
+      "description": "Voegt een whisky-item toe aan de collectie, optioneel met de eerste opslagplek.",
+      "fields": {
+        "name": { "description": "Naam van het item (bijv. \"Lagavulin 16 Years Old\")" },
+        "rack_id": { "description": "ID van het doelrek (optioneel — zonder rek worden `quantity` flessen zonder opslagplek aangemaakt)" },
+        "slot": { "description": "Pleknummer in het rek (alleen als rack_id is opgegeven)" },
+        "quantity": { "description": "Aantal aan te maken flessen als rack_id wordt weggelaten (standaard 1)" },
+        "initial_status": { "description": "Beginstatus van de aangemaakte flessen: sealed, opened of finished (standaard sealed)" },
+        "distillery": { "description": "Distilleerderij" },
+        "bottler": { "description": "Onafhankelijke bottelaar (indien afwijkend van de distilleerderij)" },
+        "brand": { "description": "Commercieel merk" },
+        "expression": { "description": "Uitgave / botteling (bijv. \"16 Year Old\")" },
+        "country": { "description": "Land" },
+        "region": { "description": "Regio" },
+        "distillery_location": { "description": "Exacte locatie van de distilleerderij" },
+        "whisky_type": { "description": "Type: Single Malt, Blended Malt, Blended Whisky, Single Grain, Bourbon, Rye, Tennessee Whiskey, Corn Whiskey, Irish Single Malt, Irish Pot Still, Japanese Whisky, World Whisky, Overig" },
+        "age": { "description": "Leeftijd (jaren)" },
+        "vintage": { "description": "Destillatiejaar" },
+        "bottling_year": { "description": "Botteljaar" },
+        "abv": { "description": "Alcoholgehalte (% vol)" },
+        "volume_ml": { "description": "Volume in milliliters" },
+        "chill_filtered": { "description": "Niet koud gefilterd = false" },
+        "natural_colour": { "description": "Natuurlijke kleur (ongekleurd) = true" },
+        "peated": { "description": "Torfig" },
+        "peat_level": { "description": "Torfgraad (bijv. licht, medium, sterk)" },
+        "ppm": { "description": "Fenolgehalte in ppm (indien bekend)" },
+        "maturation": { "description": "Samenvatting van de rijping" },
+        "cask_type": { "description": "Vattype (bijv. First Fill Bourbon, Oloroso, PX …)" },
+        "cask_number": { "description": "Vatnummer" },
+        "finish": { "description": "Finish" },
+        "maturation_years": { "description": "Rijpingsduur in jaren" },
+        "batch": { "description": "Batchnummer" },
+        "edition": { "description": "Editie" },
+        "bottle_number": { "description": "Flesnummer (gelimiteerde editie)" },
+        "number_of_bottles": { "description": "Totaal aantal geproduceerde flessen" },
+        "limited_edition": { "description": "Gelimiteerde editie" },
+        "independent_bottler": { "description": "Onafhankelijke botteling (buiten de originele distilleerderij)" },
+        "tasting_notes": { "description": "Algemene proefnotities" },
+        "nose_notes": { "description": "Neus" },
+        "palate_notes": { "description": "Smaak (gehemelte)" },
+        "finish_notes": { "description": "Afdronk" },
+        "whiskybase_id": { "description": "Whiskybase-ID (optioneel, wordt nooit automatisch opgevraagd)" },
+        "whiskybase_url": { "description": "Whiskybase-link (optioneel, wordt nooit automatisch opgevraagd)" },
+        "image_url": { "description": "URL van de foto" },
+        "label_image_url": { "description": "URL van de etiketfoto" },
+        "price": { "description": "Aankoopprijs" },
+        "current_value": { "description": "Huidige geschatte waarde" },
+        "currency": { "description": "Valuta (standaard EUR)" },
+        "purchase_date": { "description": "Aankoopdatum (JJJJ-MM-DD)" },
+        "purchase_location": { "description": "Aankoopplaats" },
+        "storage_location": { "description": "Vrije-tekst opslaglocatie (aanvullend op de rekplek)" },
+        "notes": { "description": "Persoonlijke notities" },
+        "favorite": { "description": "Favoriet" },
+        "rating": { "description": "Persoonlijke beoordeling /5" },
+        "barcode": { "description": "Streepjescode" },
+        "external_id": { "description": "Extern ID (andere database)" },
+        "external_url": { "description": "Externe link" }
+      }
+    },
+    "update_whisky": {
+      "name": "Whisky bewerken",
+      "description": "Bewerkt de informatie van een bestaand whisky-item (zelfde velden als add_whisky, zonder opslagplek).",
+      "fields": {
+        "whisky_id": { "description": "ID van de whisky" },
+        "name": { "description": "Nieuwe naam" },
+        "distillery": { "description": "Distilleerderij" },
+        "bottler": { "description": "Onafhankelijke bottelaar" },
+        "brand": { "description": "Commercieel merk" },
+        "expression": { "description": "Uitgave / botteling" },
+        "country": { "description": "Land" },
+        "region": { "description": "Regio" },
+        "whisky_type": { "description": "Whiskytype" },
+        "age": { "description": "Leeftijd" },
+        "abv": { "description": "Alcoholgehalte" },
+        "cask_type": { "description": "Vattype" },
+        "finish": { "description": "Finish" },
+        "tasting_notes": { "description": "Proefnotities" },
+        "price": { "description": "Aankoopprijs" },
+        "current_value": { "description": "Huidige geschatte waarde" },
+        "favorite": { "description": "Favoriet" },
+        "rating": { "description": "Persoonlijke beoordeling /5" }
+      }
+    },
+    "remove_whisky": {
+      "name": "Whisky verwijderen",
+      "description": "Verwijdert een whisky-item met ALLE bijbehorende flessen uit de collectie.",
+      "fields": {
+        "whisky_id": { "description": "ID van de whisky" }
+      }
+    },
+    "add_slot": {
+      "name": "Fles toevoegen",
+      "description": "Voegt nog een fysieke fles toe aan een bestaande whisky.",
+      "fields": {
+        "whisky_id": { "description": "ID van de whisky" },
+        "rack_id": { "description": "ID van het rek" },
+        "slot": { "description": "Pleknummer" },
+        "comment": { "description": "Vrije opmerking over deze fles" },
+        "size": { "description": "Flesformaat" }
+      }
+    },
+    "update_slot": {
+      "name": "Fles bewerken",
+      "description": "Wijzigt formaat of opmerking van een fysieke fles.",
+      "fields": {
+        "whisky_id": { "description": "ID van de whisky" },
+        "slot_idx": { "description": "Index van de fles in de lijst met opslagplekken" },
+        "size": { "description": "Flesformaat" },
+        "comment": { "description": "Vrije opmerking" }
+      }
+    },
+    "move_slot": {
+      "name": "Fles verplaatsen",
+      "description": "Verplaatst een fysieke fles naar een ander rek / een andere plek.",
+      "fields": {
+        "whisky_id": { "description": "ID van de whisky" },
+        "slot_idx": { "description": "Index van de te verplaatsen fles" },
+        "rack_id": { "description": "ID van het doelrek" },
+        "slot": { "description": "Doel-pleknummer" }
+      }
+    },
+    "remove_slot": {
+      "name": "Fles verwijderen",
+      "description": "Verwijdert ÉÉN fles zonder de status te wijzigen (geen verbruikservice — gebruik daarvoor open_bottle/finish_bottle). De whisky wordt automatisch mee verwijderd als dit de laatste fles was.",
+      "fields": {
+        "whisky_id": { "description": "ID van de whisky" },
+        "slot_idx": { "description": "Index van de te verwijderen fles" }
+      }
+    },
+    "open_bottle": {
+      "name": "Fles openen",
+      "description": "Markeert een fles als geopend (sealed → opened). Veroorzaakt de gebeurtenis whiskydb_bottle_opened.",
+      "fields": {
+        "whisky_id": { "description": "ID van de whisky" },
+        "slot_idx": { "description": "Index van de fles (standaard 0)" },
+        "opened_date": { "description": "Openingsdatum (JJJJ-MM-DD, standaard vandaag)" }
+      }
+    },
+    "finish_bottle": {
+      "name": "Fles leegmaken",
+      "description": "Markeert een fles als leeg (opened → finished). De opslagplek wordt NIET verwijderd: het item blijft met zijn geschiedenis zichtbaar. Veroorzaakt de gebeurtenis whiskydb_bottle_finished.",
+      "fields": {
+        "whisky_id": { "description": "ID van de whisky" },
+        "slot_idx": { "description": "Index van de fles (standaard 0)" },
+        "finished_date": { "description": "Einddatum (JJJJ-MM-DD, standaard vandaag)" },
+        "rating": { "description": "Persoonlijke beoordeling /5 voor deze whisky" },
+        "comment": { "description": "Proefopmerking voor deze fles" }
+      }
+    },
+    "update_remaining": {
+      "name": "Vulstand bijwerken",
+      "description": "Werkt de vulstand (%) van een GEOPENDE fles bij (handmatige opvolging, bijv. wegen of visueel schatten). Veroorzaakt de gebeurtenis whiskydb_bottle_low ALLEEN bij de eerste keer dat de drempel wordt onderschreden (niet bij elke aanroep) en kan direct als automatiseringstrigger worden gebruikt.",
+      "fields": {
+        "whisky_id": { "description": "ID van de whisky" },
+        "slot_idx": { "description": "Index van de fles (standaard 0)" },
+        "remaining_percent": { "description": "Vulstand, 0 tot 100" },
+        "low_threshold": { "description": "Drempelwaarde waaronder whiskydb_bottle_low wordt veroorzaakt (standaard 20)" }
+      }
+    },
+    "add_tasting": {
+      "name": "Proeverij toevoegen (buiten de collectie)",
+      "description": "Voegt een item toe aan het proefdagboek voor een whisky die je alleen hebt GEPROEFD (bij vrienden, in een bar, op een proeverij) zonder ooit een fles te hebben bezeten. Heeft GEEN invloed op de collectie (whisky's, rekken, sensoren): deze items staan in een aparte lijst en verschijnen in de kaart in het tabblad \"🥂\" samen met de leeggedronken flessen. Veroorzaakt de gebeurtenis whiskydb_tasting_added.",
+      "fields": {
+        "name": { "description": "Naam van de geproefde whisky" },
+        "distillery": { "description": "Distilleerderij" },
+        "whisky_type": { "description": "Type: Single Malt, Blended Malt, Blended Whisky, Single Grain, Bourbon, Rye, Tennessee Whiskey, Corn Whiskey, Irish Single Malt, Irish Pot Still, Japanese Whisky, World Whisky, Overig" },
+        "region": { "description": "Regio" },
+        "country": { "description": "Land" },
+        "place": { "description": "Locatie van de proeverij (bijv. \"Bij Marc\", \"Bar Le Malt\")" },
+        "tasted_date": { "description": "Proefdatum (JJJJ-MM-DD, standaard vandaag)" },
+        "rating": { "description": "Persoonlijke beoordeling /5" },
+        "comment": { "description": "Proefopmerking" }
+      }
+    },
+    "remove_tasting": {
+      "name": "Proeverij verwijderen (buiten de collectie)",
+      "description": "Verwijdert een item uit het proefdagboek.",
+      "fields": {
+        "tasting_id": { "description": "ID van het proefitem" }
+      }
+    }
+  }
+}

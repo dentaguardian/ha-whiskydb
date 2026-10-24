@@ -1159,7 +1159,7 @@ class WhiskyCard extends HTMLElement {
       this._showRecognitionLoading(box);
       try {
         const resp = await this._hass.connection.sendMessagePromise({
-          type: `${DOMAIN}/analyze_photo`, image_b64: b64, mime_type: mime,
+          type: `${DOMAIN}/analyze_photo`, image_b64: b64, mime_type: mime, language: (this._hass.locale && this._hass.locale.language) || this._hass.selectedLanguage || "de",
         });
         this._showRecognitionResult(box, resp);
       } catch (err) {

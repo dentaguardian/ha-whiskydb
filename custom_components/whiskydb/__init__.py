@@ -619,6 +619,29 @@ Falls das Bild erkennbar KEINE Whiskyflasche zeigt, gib \
 lasse alle anderen Felder null.\
 """
 
+# ── Sprachweiche: KI antwortet in der HA-Sprache des Nutzers (i18n v2.1.0) ────
+_AI_LANGUAGE_NAMES = {
+    "de": "Deutsch", "en": "Englisch", "fr": "Französisch", "es": "Spanisch",
+    "it": "Italienisch", "nl": "Niederländisch", "pt": "Portugiesisch",
+    "zh": "Chinesisch", "ja": "Japanisch", "ko": "Koreanisch", "pl": "Polnisch",
+}
+
+
+def _ai_system_for(language: str) -> str:
+    """Systemprompt + Anweisung zur Antwort-Sprache des Nutzers.
+
+    Der Verfahrens-Prompt bleibt deutsch; die Antwort-Sprache wird per
+    Anweisung gesetzt — LLMs folgen dieser Anweisung zuverlässig.
+    """
+    base = (language or "de").split("-")[0].lower()
+    name = _AI_LANGUAGE_NAMES.get(base, "Deutsch")
+    return _AI_SYSTEM_WHISKY + (
+        f"\n\nSPRACHE DER ANTWORT: Antworte AUSSCHLIESSLICH auf {name}. "
+        f"Beschreibende Textwerte (z. B. region) auf {name}; Eigennamen "
+        "(Destillerie, Marke, Produktname) bleiben wie auf dem Etikett. "
+        "JSON-Schlüssel und JSON-Struktur bleiben unverändert."
+    )
+
 
 def _safe_float_or_none(value):
     if value is None:
@@ -729,11 +752,11 @@ def _parse_ai_whisky_response(raw: str, source: str, finish: str = "") -> tuple[
 
 
 async def _ai_analyze_whisky_photo(
-    hass: HomeAssistant, image_b64: str, mime_type: str, api_key: str, api_base: str
+    hass: HomeAssistant, image_b64: str, mime_type: str, api_key: str, api_base: str, language: str = "de"
 ) -> tuple[dict | None, str | None]:
     """Analysiert ein Whisky-Etikettenfoto über ein visionsfähiges Modell."""
     messages = [
-        {"role": "system", "content": _AI_SYSTEM_WHISKY},
+        {"role": "system", "content": _ai_system_for(language)},
         {"role": "user", "content": [
             {"type": "text", "text": "Identifiziere diesen Whisky anhand dieses Fotos."},
             {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_b64}"}},
@@ -764,12 +787,12 @@ async def _ai_analyze_whisky_photo(
 
 
 async def _ai_search_whisky_text(
-    hass: HomeAssistant, query: str, api_key: str, api_base: str
+    hass: HomeAssistant, query: str, api_key: str, api_base: str, language: str = "de"
 ) -> tuple[dict | None, str | None]:
     """KI-Suche anhand des Namens (ohne API-Key wird diese Funktion nicht
     aufgerufen, siehe WebSocket-Handler)."""
     messages = [
-        {"role": "system", "content": _AI_SYSTEM_WHISKY},
+        {"role": "system", "content": _ai_system_for(language)},
         {"role": "user", "content": f'Identifiziere diesen Whisky: "{query}"'},
     ]
     data, code = await _ai_call(
@@ -899,6 +922,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         vol.Required("type"):      "whiskydb/analyze_photo",
         vol.Required("image_b64"): str,
         vol.Required("mime_type"): str,
+        vol.Optional("language", default="de"): str,
     })
     @websocket_api.async_response
     async def ws_analyze_photo(hass: HomeAssistant, connection, msg: dict) -> None:
@@ -907,7 +931,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not gkey:
             connection.send_result(msg["id"], {"result": None, "error": ERR_NO_KEY})
             return
-        result, err = await _ai_analyze_whisky_photo(hass, msg["image_b64"], msg["mime_type"], gkey, gbase)
+        result, err = await _ai_analyze_whisky_photo(hass, msg["image_b64"], msg["mime_type"], gkey, gbase, msg.get("language", "de"))
         connection.send_result(msg["id"], {"result": result, "error": err})
 
     websocket_api.async_register_command(hass, ws_analyze_photo)
@@ -915,6 +939,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     @websocket_api.websocket_command({
         vol.Required("type"):  "whiskydb/search_whisky",
         vol.Required("query"): str,
+        vol.Optional("language", default="de"): str,
     })
     @websocket_api.async_response
     async def ws_search_whisky(hass: HomeAssistant, connection, msg: dict) -> None:
@@ -927,7 +952,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if len(query) < 3:
             connection.send_result(msg["id"], {"result": None, "error": None})
             return
-        result, err = await _ai_search_whisky_text(hass, query, gkey, gbase)
+        result, err = await _ai_search_whisky_text(hass, query, gkey, gbase, msg.get("language", "de"))
         connection.send_result(msg["id"], {"result": result, "error": err})
 
     websocket_api.async_register_command(hass, ws_search_whisky)

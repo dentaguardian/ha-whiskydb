@@ -1,0 +1,290 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WhiskyDB — コレクション",
+        "description": "ようこそ！ここでウイスキーコレクションを設定します。",
+        "data": {
+          "collection_name": "コレクション名",
+          "ai_api_key": "APIキー（任意）",
+          "ai_base_url": "AIエンドポイント（任意）"
+        },
+        "data_description": {
+          "ai_api_key": "console.mistral.ai（「API Keys」セクション）で無料のキーを取得できます。キーなし：手動入力のみで、ラベル認識は不可。",
+          "ai_base_url": "デフォルト：https://api.mistral.ai/v1（Mistral）。代替：Ollama（http://localhost:11434/v1）、LM Studio、OpenRouter。"
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "無効な形式 — APIキーにスペースを含めることはできず、20文字以上である必要があります"
+    },
+    "abort": {
+      "already_configured": "WhiskyDBはすでに設定されています。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "WhiskyDB設定",
+        "description": "APIキーまたはAIエンドポイントを更新します。",
+        "data": {
+          "ai_api_key": "APIキー",
+          "ai_base_url": "AIエンドポイント"
+        },
+        "data_description": {
+          "ai_api_key": "console.mistral.aiで新しいキーを作成してください。手動入力のみにする場合は空欄のままにします。",
+          "ai_base_url": "デフォルト：https://api.mistral.ai/v1（Mistral）。ローカルモデルは例：http://localhost:11434/v1（Ollama）。"
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "無効な形式 — APIキーにスペースを含めることはできず、20文字以上である必要があります"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "whiskydb_total": { "name": "WhiskyDB 総ボトル数" },
+      "whiskydb_opened": { "name": "WhiskyDB 開封済み" },
+      "whiskydb_sealed": { "name": "WhiskyDB 未開封" },
+      "whiskydb_finished": { "name": "WhiskyDB 飲み切り" },
+      "whiskydb_distilleries": { "name": "WhiskyDB 蒸留所" },
+      "whiskydb_collection_value": { "name": "WhiskyDB コレクション価値" },
+      "whiskydb_average_age": { "name": "WhiskyDB 平均熟成年数" }
+    }
+  },
+  "services": {
+    "add_rack": {
+      "name": "ラックを追加",
+      "description": "コレクション内に収納ラックを追加します。",
+      "fields": {
+        "cellar_id": { "description": "コレクションID（任意、デフォルト：最初のもの）" },
+        "name": { "description": "ラック名" },
+        "columns": { "description": "列数" },
+        "shelves": { "description": "棚数" },
+        "levels": { "description": "積み重ねレベル（1〜4）" }
+      }
+    },
+    "update_rack": {
+      "name": "ラックを編集",
+      "description": "既存のラックを編集します。",
+      "fields": {
+        "rack_id": { "description": "ラックID" },
+        "name": { "description": "新しい名前" },
+        "columns": { "description": "列数" },
+        "shelves": { "description": "棚数" },
+        "levels": { "description": "積み重ねレベル（1〜4）" }
+      }
+    },
+    "remove_rack": {
+      "name": "ラックを削除",
+      "description": "ラックを削除します。中のボトルは保管場所を失いますが、コレクションには残ります。",
+      "fields": {
+        "rack_id": { "description": "ラックID" }
+      }
+    },
+    "add_cellar": {
+      "name": "コレクションを追加",
+      "description": "インスタンスに新しい空のコレクション（キャビネット）を作成します。",
+      "fields": {
+        "name": { "description": "コレクション名" }
+      }
+    },
+    "rename_cellar": {
+      "name": "コレクション名を変更",
+      "description": "コレクションの名前を変更します（cellar_id省略時は最初のもの）。",
+      "fields": {
+        "cellar_id": { "description": "コレクションID（任意）" },
+        "name": { "description": "新しい名前" }
+      }
+    },
+    "remove_cellar": {
+      "name": "コレクションを削除",
+      "description": "空のコレクションを削除します（ラックが含まれる場合や最後の1つの場合は拒否されます）。",
+      "fields": {
+        "cellar_id": { "description": "コレクションID" }
+      }
+    },
+    "add_whisky": {
+      "name": "ウイスキーを追加",
+      "description": "コレクションにウイスキーの記録を追加します。最初の保管場所は任意で指定できます。",
+      "fields": {
+        "name": { "description": "記録名（例：\"Lagavulin 16 Years Old\"）" },
+        "rack_id": { "description": "対象ラックID（任意 — ラックなしの場合、保管場所なしで `quantity` 本のボトルが作成されます）" },
+        "slot": { "description": "ラック内のスロット番号（rack_id指定時のみ有効）" },
+        "quantity": { "description": "rack_id省略時に作成するボトル数（デフォルト1）" },
+        "initial_status": { "description": "作成されるボトルの初期ステータス：sealed（未開封）、opened（開封済み）、finished（飲み切り）（デフォルト sealed）" },
+        "distillery": { "description": "蒸留所" },
+        "bottler": { "description": "独立系ボトラ―（蒸留所と異なる場合）" },
+        "brand": { "description": "商標ブランド" },
+        "expression": { "description": "表現 / ボトリング（例：\"16 Year Old\"）" },
+        "country": { "description": "国" },
+        "region": { "description": "地域" },
+        "distillery_location": { "description": "蒸留所の正確な所在地" },
+        "whisky_type": { "description": "タイプ：シングルモルト、ブレンデッドモルト、ブレンデッドウイスキー、シングルグレーン、バーボン、ライ、テネシーウイスキー、コーンウイスキー、アイリッシュシングルモルト、アイリッシュポットスチル、ジャパニーズウイスキー、ワールドウイスキー、その他" },
+        "age": { "description": "熟成年数（年）" },
+        "vintage": { "description": "蒸留年" },
+        "bottling_year": { "description": "ボトリング年" },
+        "abv": { "description": "アルコール度数（% vol）" },
+        "volume_ml": { "description": "容量（ミリリットル）" },
+        "chill_filtered": { "description": "非チルフィルター = false" },
+        "natural_colour": { "description": "天然色（無着色）= true" },
+        "peated": { "description": "ピーティー" },
+        "peat_level": { "description": "ピートレベル（例：軽い、中程度、強い）" },
+        "ppm": { "description": "フェノール含有量（ppm、判明している場合）" },
+        "maturation": { "description": "熟成の概要" },
+        "cask_type": { "description": "樽のタイプ（例：ファーストフィルバーボン、オロロソ、PX …）" },
+        "cask_number": { "description": "樽番号" },
+        "finish": { "description": "フィニッシュ" },
+        "maturation_years": { "description": "熟成期間（年）" },
+        "batch": { "description": "バッチ番号" },
+        "edition": { "description": "エディション" },
+        "bottle_number": { "description": "ボトル番号（限定版）" },
+        "number_of_bottles": { "description": "生産本数の合計" },
+        "limited_edition": { "description": "限定版" },
+        "independent_bottler": { "description": "独立系ボトリング（元の蒸留所以外）" },
+        "tasting_notes": { "description": "全体のテイスティングノート" },
+        "nose_notes": { "description": "香り" },
+        "palate_notes": { "description": "味わい" },
+        "finish_notes": { "description": "フィニッシュ（余韻）" },
+        "whiskybase_id": { "description": "Whiskybase ID（任意、自動照会は行われません）" },
+        "whiskybase_url": { "description": "Whiskybaseリンク（任意、自動照会は行われません）" },
+        "image_url": { "description": "写真URL" },
+        "label_image_url": { "description": "ラベル写真URL" },
+        "price": { "description": "購入価格" },
+        "current_value": { "description": "現在の推定価値" },
+        "currency": { "description": "通貨（デフォルト EUR）" },
+        "purchase_date": { "description": "購入日（YYYY-MM-DD）" },
+        "purchase_location": { "description": "購入場所" },
+        "storage_location": { "description": "自由記述の保管場所（ラックスロットに加えて）" },
+        "notes": { "description": "個人メモ" },
+        "favorite": { "description": "お気に入り" },
+        "rating": { "description": "個人的評価 /5" },
+        "barcode": { "description": "バーコード" },
+        "external_id": { "description": "外部ID（他のデータベース）" },
+        "external_url": { "description": "外部リンク" }
+      }
+    },
+    "update_whisky": {
+      "name": "ウイスキーを編集",
+      "description": "既存のウイスキー記録の情報を編集します（add_whiskyと同じフィールド、保管場所なし）。",
+      "fields": {
+        "whisky_id": { "description": "ウイスキーID" },
+        "name": { "description": "新しい名前" },
+        "distillery": { "description": "蒸留所" },
+        "bottler": { "description": "独立系ボトラー" },
+        "brand": { "description": "商標ブランド" },
+        "expression": { "description": "表現 / ボトリング" },
+        "country": { "description": "国" },
+        "region": { "description": "地域" },
+        "whisky_type": { "description": "ウイスキータイプ" },
+        "age": { "description": "熟成年数" },
+        "abv": { "description": "アルコール度数" },
+        "cask_type": { "description": "樽のタイプ" },
+        "finish": { "description": "フィニッシュ" },
+        "tasting_notes": { "description": "テイスティングノート" },
+        "price": { "description": "購入価格" },
+        "current_value": { "description": "現在の推定価値" },
+        "favorite": { "description": "お気に入り" },
+        "rating": { "description": "個人的評価 /5" }
+      }
+    },
+    "remove_whisky": {
+      "name": "ウイスキーを削除",
+      "description": "コレクションからウイスキーの記録とそのすべてのボトルを削除します。",
+      "fields": {
+        "whisky_id": { "description": "ウイスキーID" }
+      }
+    },
+    "add_slot": {
+      "name": "ボトルを追加",
+      "description": "既存のウイスキーに別の物理的なボトルを追加します。",
+      "fields": {
+        "whisky_id": { "description": "ウイスキーID" },
+        "rack_id": { "description": "ラックID" },
+        "slot": { "description": "スロット番号" },
+        "comment": { "description": "このボトルへの自由コメント" },
+        "size": { "description": "ボトル形状" }
+      }
+    },
+    "update_slot": {
+      "name": "ボトルを編集",
+      "description": "物理的なボトルの形状またはコメントを変更します。",
+      "fields": {
+        "whisky_id": { "description": "ウイスキーID" },
+        "slot_idx": { "description": "保管スロット一覧におけるボトルのインデックス" },
+        "size": { "description": "ボトル形状" },
+        "comment": { "description": "自由コメント" }
+      }
+    },
+    "move_slot": {
+      "name": "ボトルを移動",
+      "description": "物理的なボトルを別のラック / スロットへ移動します。",
+      "fields": {
+        "whisky_id": { "description": "ウイスキーID" },
+        "slot_idx": { "description": "移動するボトルのインデックス" },
+        "rack_id": { "description": "対象ラックID" },
+        "slot": { "description": "移動先スロット番号" }
+      }
+    },
+    "remove_slot": {
+      "name": "ボトルを削除",
+      "description": "ステータスを変更せずに1本のボトルを削除します（飲用サービスではありません — それには open_bottle/finish_bottle を使用してください）。これが最後のボトルだった場合、ウイスキーも自動的に削除されます。",
+      "fields": {
+        "whisky_id": { "description": "ウイスキーID" },
+        "slot_idx": { "description": "削除するボトルのインデックス" }
+      }
+    },
+    "open_bottle": {
+      "name": "ボトルを開封",
+      "description": "ボトルを開封済みとしてマークします（sealed → opened）。whiskydb_bottle_opened イベントを発火します。",
+      "fields": {
+        "whisky_id": { "description": "ウイスキーID" },
+        "slot_idx": { "description": "ボトルのインデックス（デフォルト0）" },
+        "opened_date": { "description": "開封日（YYYY-MM-DD、デフォルトは今日）" }
+      }
+    },
+    "finish_bottle": {
+      "name": "ボトルを飲み切る",
+      "description": "ボトルを飲み切りとしてマークします（opened → finished）。保管スロットは削除されません：記録は履歴とともに閲覧可能です。whiskydb_bottle_finished イベントを発火します。",
+      "fields": {
+        "whisky_id": { "description": "ウイスキーID" },
+        "slot_idx": { "description": "ボトルのインデックス（デフォルト0）" },
+        "finished_date": { "description": "終了日（YYYY-MM-DD、デフォルトは今日）" },
+        "rating": { "description": "このウイスキーへの個人的評価 /5" },
+        "comment": { "description": "このボトルのテイスティングコメント" }
+      }
+    },
+    "update_remaining": {
+      "name": "残量を更新",
+      "description": "開封済みボトルの残量（%）を更新します（手動管理、例：計量や目視）。whiskydb_bottle_low イベントはしきい値を初めて下回った時にのみ発火します（毎回ではありません）。オートメーションのトリガーとして直接利用できます。",
+      "fields": {
+        "whisky_id": { "description": "ウイスキーID" },
+        "slot_idx": { "description": "ボトルのインデックス（デフォルト0）" },
+        "remaining_percent": { "description": "残量、0〜100" },
+        "low_threshold": { "description": "この値を下回ると whiskydb_bottle_low が発火（デフォルト20）" }
+      }
+    },
+    "add_tasting": {
+      "name": "テイスティングを追加（コレクション外）",
+      "description": "一度もボトルを所有したことのない、味わっただけのウイスキー（友人宅、バー、テイスティング会など）のテイスティング日記エントリーを追加します。コレクション（ウイスキー、ラック、センサー）には影響しません：これらのエントリーは別のリストに保存され、カードの \"🥂\" タブに飲み切ったボトルと一緒に表示されます。whiskydb_tasting_added イベントを発火します。",
+      "fields": {
+        "name": { "description": "テイスティングしたウイスキーの名前" },
+        "distillery": { "description": "蒸留所" },
+        "whisky_type": { "description": "タイプ：シングルモルト、ブレンデッドモルト、ブレンデッドウイスキー、シングルグレーン、バーボン、ライ、テネシーウイスキー、コーンウイスキー、アイリッシュシングルモルト、アイリッシュポットスチル、ジャパニーズウイスキー、ワールドウイスキー、その他" },
+        "region": { "description": "地域" },
+        "country": { "description": "国" },
+        "place": { "description": "テイスティングの場所（例：\"マルクの家\"、\"バー Le Malt\"）" },
+        "tasted_date": { "description": "テイスティング日（YYYY-MM-DD、デフォルトは今日）" },
+        "rating": { "description": "個人的評価 /5" },
+        "comment": { "description": "テイスティングコメント" }
+      }
+    },
+    "remove_tasting": {
+      "name": "テイスティングを削除（コレクション外）",
+      "description": "テイスティング日記からエントリーを削除します。",
+      "fields": {
+        "tasting_id": { "description": "テイスティングエントリーID" }
+      }
+    }
+  }
+}

@@ -1,0 +1,290 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WhiskyDB — 藏品",
+        "description": "歡迎！在此設定您的威士忌藏品。",
+        "data": {
+          "collection_name": "藏品名稱",
+          "ai_api_key": "API 金鑰（選填）",
+          "ai_base_url": "AI 端點（選填）"
+        },
+        "data_description": {
+          "ai_api_key": "在 console.mistral.ai（「API Keys」區段）取得免費金鑰。無金鑰：僅可手動輸入，無標籤辨識功能。",
+          "ai_base_url": "預設：https://api.mistral.ai/v1（Mistral）。備選：Ollama（http://localhost:11434/v1）、LM Studio 或 OpenRouter。"
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "格式無效 — API 金鑰不可包含空格，長度至少 20 個字元"
+    },
+    "abort": {
+      "already_configured": "WhiskyDB 已經設定完成。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "WhiskyDB 設定",
+        "description": "更新 API 金鑰或 AI 端點。",
+        "data": {
+          "ai_api_key": "API 金鑰",
+          "ai_base_url": "AI 端點"
+        },
+        "data_description": {
+          "ai_api_key": "在 console.mistral.ai 建立新金鑰。留空則僅支援手動輸入。",
+          "ai_base_url": "預設：https://api.mistral.ai/v1（Mistral）。本機模型例如 http://localhost:11434/v1（Ollama）。"
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "格式無效 — API 金鑰不可包含空格，長度至少 20 個字元"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "whiskydb_total": { "name": "WhiskyDB 瓶總數" },
+      "whiskydb_opened": { "name": "WhiskyDB 已開瓶" },
+      "whiskydb_sealed": { "name": "WhiskyDB 未開瓶" },
+      "whiskydb_finished": { "name": "WhiskyDB 已喝完" },
+      "whiskydb_distilleries": { "name": "WhiskyDB 蒸餾廠" },
+      "whiskydb_collection_value": { "name": "WhiskyDB 藏品價值" },
+      "whiskydb_average_age": { "name": "WhiskyDB 平均酒齡" }
+    }
+  },
+  "services": {
+    "add_rack": {
+      "name": "新增酒架",
+      "description": "在藏品中新增一個存放酒架。",
+      "fields": {
+        "cellar_id": { "description": "藏品 ID（選填，預設為第一個）" },
+        "name": { "description": "酒架名稱" },
+        "columns": { "description": "欄數" },
+        "shelves": { "description": "層數" },
+        "levels": { "description": "堆疊層數（1 至 4）" }
+      }
+    },
+    "update_rack": {
+      "name": "編輯酒架",
+      "description": "編輯現有的酒架。",
+      "fields": {
+        "rack_id": { "description": "酒架 ID" },
+        "name": { "description": "新名稱" },
+        "columns": { "description": "欄數" },
+        "shelves": { "description": "層數" },
+        "levels": { "description": "堆疊層數（1 至 4）" }
+      }
+    },
+    "remove_rack": {
+      "name": "刪除酒架",
+      "description": "刪除一個酒架。其中的瓶會失去存放位置，但仍保留在藏品中。",
+      "fields": {
+        "rack_id": { "description": "酒架 ID" }
+      }
+    },
+    "add_cellar": {
+      "name": "新增藏品",
+      "description": "在執行個體中建立一個新的空藏品（櫃）。",
+      "fields": {
+        "name": { "description": "藏品名稱" }
+      }
+    },
+    "rename_cellar": {
+      "name": "重新命名藏品",
+      "description": "重新命名藏品（省略 cellar_id 時為第一個）。",
+      "fields": {
+        "cellar_id": { "description": "藏品 ID（選填）" },
+        "name": { "description": "新名稱" }
+      }
+    },
+    "remove_cellar": {
+      "name": "刪除藏品",
+      "description": "刪除空藏品（若包含酒架或為最後一個，將被拒絕）。",
+      "fields": {
+        "cellar_id": { "description": "藏品 ID" }
+      }
+    },
+    "add_whisky": {
+      "name": "新增威士忌",
+      "description": "向藏品新增一筆威士忌紀錄，可選擇同時指定第一個存放位置。",
+      "fields": {
+        "name": { "description": "紀錄名稱（例如 \"Lagavulin 16 Years Old\"）" },
+        "rack_id": { "description": "目標酒架 ID（選填 — 不指定酒架時，將建立 `quantity` 瓶無存放位置的紀錄）" },
+        "slot": { "description": "酒架中的位置編號（僅當指定 rack_id 時有效）" },
+        "quantity": { "description": "省略 rack_id 時要建立的瓶數（預設 1）" },
+        "initial_status": { "description": "新建瓶的初始狀態：sealed（未開瓶）、opened（已開瓶）或 finished（已喝完）（預設 sealed）" },
+        "distillery": { "description": "蒸餾廠" },
+        "bottler": { "description": "獨立裝瓶商（如與蒸餾廠不同）" },
+        "brand": { "description": "商業品牌" },
+        "expression": { "description": "版本 / 裝瓶（例如 \"16 Year Old\"）" },
+        "country": { "description": "國家" },
+        "region": { "description": "產區" },
+        "distillery_location": { "description": "蒸餾廠的確切位置" },
+        "whisky_type": { "description": "類型：Single Malt（單一麥芽）、Blended Malt（調和麥芽）、Blended Whisky（調和威士忌）、Single Grain（單一穀物）、Bourbon（波本）、Rye（黑麥）、Tennessee Whiskey、Corn Whiskey、Irish Single Malt、Irish Pot Still、Japanese Whisky（日威）、World Whisky（世界威士忌）、其他" },
+        "age": { "description": "酒齡（年）" },
+        "vintage": { "description": "蒸餾年份" },
+        "bottling_year": { "description": "裝瓶年份" },
+        "abv": { "description": "酒精濃度（% vol）" },
+        "volume_ml": { "description": "容量（毫升）" },
+        "chill_filtered": { "description": "非冷凝過濾 = false" },
+        "natural_colour": { "description": "天然色澤（未著色）= true" },
+        "peated": { "description": "泥煤" },
+        "peat_level": { "description": "泥煤程度（例如輕、中、重）" },
+        "ppm": { "description": "苯酚含量（ppm，如已知）" },
+        "maturation": { "description": "陳釀概述" },
+        "cask_type": { "description": "桶型（例如 First Fill Bourbon、Oloroso、PX …）" },
+        "cask_number": { "description": "桶號" },
+        "finish": { "description": "過桶（Finish）" },
+        "maturation_years": { "description": "陳釀年數" },
+        "batch": { "description": "批次號" },
+        "edition": { "description": "版次" },
+        "bottle_number": { "description": "瓶號（限量版）" },
+        "number_of_bottles": { "description": "總生產瓶數" },
+        "limited_edition": { "description": "限量版" },
+        "independent_bottler": { "description": "獨立裝瓶（非原蒸餾廠）" },
+        "tasting_notes": { "description": "整體品飲筆記" },
+        "nose_notes": { "description": "聞香" },
+        "palate_notes": { "description": "口感" },
+        "finish_notes": { "description": "尾韻" },
+        "whiskybase_id": { "description": "Whiskybase ID（選填，絕不自動查詢）" },
+        "whiskybase_url": { "description": "Whiskybase 連結（選填，絕不自動查詢）" },
+        "image_url": { "description": "照片 URL" },
+        "label_image_url": { "description": "標籤照片 URL" },
+        "price": { "description": "購買價格" },
+        "current_value": { "description": "目前估值" },
+        "currency": { "description": "貨幣（預設 EUR）" },
+        "purchase_date": { "description": "購買日期（YYYY-MM-DD）" },
+        "purchase_location": { "description": "購買地點" },
+        "storage_location": { "description": "自由文字存放位置（酒架位置之外）" },
+        "notes": { "description": "個人筆記" },
+        "favorite": { "description": "收藏" },
+        "rating": { "description": "個人評分 /5" },
+        "barcode": { "description": "條碼" },
+        "external_id": { "description": "外部 ID（其他資料庫）" },
+        "external_url": { "description": "外部連結" }
+      }
+    },
+    "update_whisky": {
+      "name": "編輯威士忌",
+      "description": "編輯現有威士忌紀錄的資訊（欄位與 add_whisky 相同，不含存放位置）。",
+      "fields": {
+        "whisky_id": { "description": "威士忌 ID" },
+        "name": { "description": "新名稱" },
+        "distillery": { "description": "蒸餾廠" },
+        "bottler": { "description": "獨立裝瓶商" },
+        "brand": { "description": "商業品牌" },
+        "expression": { "description": "版本 / 裝瓶" },
+        "country": { "description": "國家" },
+        "region": { "description": "產區" },
+        "whisky_type": { "description": "威士忌類型" },
+        "age": { "description": "酒齡" },
+        "abv": { "description": "酒精濃度" },
+        "cask_type": { "description": "桶型" },
+        "finish": { "description": "過桶" },
+        "tasting_notes": { "description": "品飲筆記" },
+        "price": { "description": "購買價格" },
+        "current_value": { "description": "目前估值" },
+        "favorite": { "description": "收藏" },
+        "rating": { "description": "個人評分 /5" }
+      }
+    },
+    "remove_whisky": {
+      "name": "移除威士忌",
+      "description": "從藏品中移除一筆威士忌紀錄及其全部瓶。",
+      "fields": {
+        "whisky_id": { "description": "威士忌 ID" }
+      }
+    },
+    "add_slot": {
+      "name": "新增瓶",
+      "description": "為現有威士忌新增另一瓶實體酒。",
+      "fields": {
+        "whisky_id": { "description": "威士忌 ID" },
+        "rack_id": { "description": "酒架 ID" },
+        "slot": { "description": "位置編號" },
+        "comment": { "description": "關於此瓶的自由備註" },
+        "size": { "description": "瓶型" }
+      }
+    },
+    "update_slot": {
+      "name": "編輯瓶",
+      "description": "變更實體酒瓶的瓶型或備註。",
+      "fields": {
+        "whisky_id": { "description": "威士忌 ID" },
+        "slot_idx": { "description": "該瓶在存放位置清單中的索引" },
+        "size": { "description": "瓶型" },
+        "comment": { "description": "自由備註" }
+      }
+    },
+    "move_slot": {
+      "name": "移動瓶",
+      "description": "將實體酒瓶移至其他酒架 / 位置。",
+      "fields": {
+        "whisky_id": { "description": "威士忌 ID" },
+        "slot_idx": { "description": "要移動的瓶的索引" },
+        "rack_id": { "description": "目標酒架 ID" },
+        "slot": { "description": "目標位置編號" }
+      }
+    },
+    "remove_slot": {
+      "name": "移除瓶",
+      "description": "移除一瓶實體酒而不變更其狀態（這不是消費服務 — 請使用 open_bottle/finish_bottle）。如果這是該威士忌的最後一瓶，將自動一併刪除該威士忌。",
+      "fields": {
+        "whisky_id": { "description": "威士忌 ID" },
+        "slot_idx": { "description": "要移除的瓶的索引" }
+      }
+    },
+    "open_bottle": {
+      "name": "開瓶",
+      "description": "將一瓶標記為已開瓶（sealed → opened）。觸發 whiskydb_bottle_opened 事件。",
+      "fields": {
+        "whisky_id": { "description": "威士忌 ID" },
+        "slot_idx": { "description": "瓶的索引（預設 0）" },
+        "opened_date": { "description": "開瓶日期（YYYY-MM-DD，預設今天）" }
+      }
+    },
+    "finish_bottle": {
+      "name": "喝完瓶",
+      "description": "將一瓶標記為已喝完（opened → finished）。存放位置不會被刪除：紀錄及其歷史仍可查看。觸發 whiskydb_bottle_finished 事件。",
+      "fields": {
+        "whisky_id": { "description": "威士忌 ID" },
+        "slot_idx": { "description": "瓶的索引（預設 0）" },
+        "finished_date": { "description": "結束日期（YYYY-MM-DD，預設今天）" },
+        "rating": { "description": "此威士忌的個人評分 /5" },
+        "comment": { "description": "此瓶的品飲備註" }
+      }
+    },
+    "update_remaining": {
+      "name": "更新餘量",
+      "description": "更新已開瓶的餘量（%）（手動追蹤，例如稱重或目測）。僅在首次低於閾值時觸發 whiskydb_bottle_low 事件（並非每次呼叫都觸發），可直接用作自動化觸發器。",
+      "fields": {
+        "whisky_id": { "description": "威士忌 ID" },
+        "slot_idx": { "description": "瓶的索引（預設 0）" },
+        "remaining_percent": { "description": "餘量，0 至 100" },
+        "low_threshold": { "description": "低於此閾值時觸發 whiskydb_bottle_low（預設 20）" }
+      }
+    },
+    "add_tasting": {
+      "name": "新增品飲紀錄（藏品外）",
+      "description": "為您只在別處品飲過（朋友家、酒吧、品飲會）而從未擁有過瓶的威士忌新增品飲日記條目。對藏品（威士忌、酒架、感應器）沒有任何影響：這些條目存放在獨立的清單中，與已喝完的瓶一起顯示在卡片的 \"🥂\" 分頁中。觸發 whiskydb_tasting_added 事件。",
+      "fields": {
+        "name": { "description": "品飲的威士忌名稱" },
+        "distillery": { "description": "蒸餾廠" },
+        "whisky_type": { "description": "類型：Single Malt、Blended Malt、Blended Whisky、Single Grain、Bourbon、Rye、Tennessee Whiskey、Corn Whiskey、Irish Single Malt、Irish Pot Still、Japanese Whisky、World Whisky、其他" },
+        "region": { "description": "產區" },
+        "country": { "description": "國家" },
+        "place": { "description": "品飲地點（例如 \"在 Marc 家\"、\"Le Malt 酒吧\"）" },
+        "tasted_date": { "description": "品飲日期（YYYY-MM-DD，預設今天）" },
+        "rating": { "description": "個人評分 /5" },
+        "comment": { "description": "品飲備註" }
+      }
+    },
+    "remove_tasting": {
+      "name": "刪除品飲紀錄（藏品外）",
+      "description": "從品飲日記中刪除一筆紀錄。",
+      "fields": {
+        "tasting_id": { "description": "品飲紀錄 ID" }
+      }
+    }
+  }
+}

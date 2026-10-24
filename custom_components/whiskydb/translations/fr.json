@@ -1,0 +1,290 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WhiskyDB — Collection",
+        "description": "Bienvenue ! Configurez ici votre collection de whiskies.",
+        "data": {
+          "collection_name": "Nom de la collection",
+          "ai_api_key": "Clé API (facultative)",
+          "ai_base_url": "Endpoint IA (facultatif)"
+        },
+        "data_description": {
+          "ai_api_key": "Clé gratuite sur console.mistral.ai (rubrique « API Keys »). Sans clé : saisie manuelle uniquement, pas de reconnaissance d'étiquettes.",
+          "ai_base_url": "Par défaut : https://api.mistral.ai/v1 (Mistral). Alternatives : Ollama (http://localhost:11434/v1), LM Studio ou OpenRouter."
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "Format invalide — la clé API ne doit pas contenir d'espaces et doit comporter au moins 20 caractères"
+    },
+    "abort": {
+      "already_configured": "WhiskyDB est déjà configuré."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Paramètres WhiskyDB",
+        "description": "Mettre à jour la clé API ou l'endpoint IA.",
+        "data": {
+          "ai_api_key": "Clé API",
+          "ai_base_url": "Endpoint IA"
+        },
+        "data_description": {
+          "ai_api_key": "Créez une nouvelle clé sur console.mistral.ai. Laissez vide pour une saisie uniquement manuelle.",
+          "ai_base_url": "Par défaut : https://api.mistral.ai/v1 (Mistral). Pour des modèles locaux, p. ex. http://localhost:11434/v1 (Ollama)."
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "Format invalide — la clé API ne doit pas contenir d'espaces et doit comporter au moins 20 caractères"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "whiskydb_total": { "name": "WhiskyDB Bouteilles au total" },
+      "whiskydb_opened": { "name": "WhiskyDB Ouvertes" },
+      "whiskydb_sealed": { "name": "WhiskyDB Scellées" },
+      "whiskydb_finished": { "name": "WhiskyDB Terminées" },
+      "whiskydb_distilleries": { "name": "WhiskyDB Distilleries" },
+      "whiskydb_collection_value": { "name": "WhiskyDB Valeur de la collection" },
+      "whiskydb_average_age": { "name": "WhiskyDB Âge moyen" }
+    }
+  },
+  "services": {
+    "add_rack": {
+      "name": "Ajouter une étagère",
+      "description": "Ajoute une étagère de rangement dans une collection.",
+      "fields": {
+        "cellar_id": { "description": "ID de la collection (facultatif, par défaut : la première)" },
+        "name": { "description": "Nom de l'étagère" },
+        "columns": { "description": "Nombre de colonnes" },
+        "shelves": { "description": "Nombre de plateaux" },
+        "levels": { "description": "Niveaux superposés (1 à 4)" }
+      }
+    },
+    "update_rack": {
+      "name": "Modifier l'étagère",
+      "description": "Modifie une étagère existante.",
+      "fields": {
+        "rack_id": { "description": "ID de l'étagère" },
+        "name": { "description": "Nouveau nom" },
+        "columns": { "description": "Nombre de colonnes" },
+        "shelves": { "description": "Nombre de plateaux" },
+        "levels": { "description": "Niveaux superposés (1 à 4)" }
+      }
+    },
+    "remove_rack": {
+      "name": "Supprimer l'étagère",
+      "description": "Supprime une étagère. Les bouteilles qu'elle contient perdent leur emplacement mais restent dans la collection.",
+      "fields": {
+        "rack_id": { "description": "ID de l'étagère" }
+      }
+    },
+    "add_cellar": {
+      "name": "Ajouter une collection",
+      "description": "Crée une nouvelle collection (armoire) vide dans l'instance.",
+      "fields": {
+        "name": { "description": "Nom de la collection" }
+      }
+    },
+    "rename_cellar": {
+      "name": "Renommer la collection",
+      "description": "Renomme une collection (la première si cellar_id est omis).",
+      "fields": {
+        "cellar_id": { "description": "ID de la collection (facultatif)" },
+        "name": { "description": "Nouveau nom" }
+      }
+    },
+    "remove_cellar": {
+      "name": "Supprimer la collection",
+      "description": "Supprime une collection vide (refusé si elle contient des étagères ou s'il s'agit de la dernière).",
+      "fields": {
+        "cellar_id": { "description": "ID de la collection" }
+      }
+    },
+    "add_whisky": {
+      "name": "Ajouter un whisky",
+      "description": "Ajoute une fiche de whisky à la collection, éventuellement avec son premier emplacement de rangement.",
+      "fields": {
+        "name": { "description": "Nom de la fiche (ex. « Lagavulin 16 Years Old »)" },
+        "rack_id": { "description": "ID de l'étagère cible (facultatif — sans étagère, `quantity` exemplaires sont créés sans emplacement)" },
+        "slot": { "description": "Numéro d'emplacement dans l'étagère (uniquement si rack_id est fourni)" },
+        "quantity": { "description": "Nombre d'exemplaires à créer si rack_id est omis (par défaut 1)" },
+        "initial_status": { "description": "Statut initial des exemplaires créés : sealed, opened ou finished (par défaut sealed)" },
+        "distillery": { "description": "Distillerie" },
+        "bottler": { "description": "Embouteilleur indépendant (s'il diffère de la distillerie)" },
+        "brand": { "description": "Marque commerciale" },
+        "expression": { "description": "Expression / embouteillage (ex. « 16 Year Old »)" },
+        "country": { "description": "Pays" },
+        "region": { "description": "Région" },
+        "distillery_location": { "description": "Localisation exacte de la distillerie" },
+        "whisky_type": { "description": "Type : Single Malt, Blended Malt, Blended Whisky, Single Grain, Bourbon, Rye, Tennessee Whiskey, Corn Whiskey, Irish Single Malt, Irish Pot Still, Japanese Whisky, World Whisky, Autre" },
+        "age": { "description": "Âge (années)" },
+        "vintage": { "description": "Année de distillation" },
+        "bottling_year": { "description": "Année d'embouteillage" },
+        "abv": { "description": "Titre alcoométrique (% vol)" },
+        "volume_ml": { "description": "Volume en millilitres" },
+        "chill_filtered": { "description": "Non filtré à froid = false" },
+        "natural_colour": { "description": "Couleur naturelle (non colorée) = true" },
+        "peated": { "description": "Tourbé" },
+        "peat_level": { "description": "Niveau de tourbe (ex. léger, moyen, fort)" },
+        "ppm": { "description": "Teneur en phénols en ppm (si connue)" },
+        "maturation": { "description": "Résumé de l'élevage" },
+        "cask_type": { "description": "Type de fût (ex. First Fill Bourbon, Oloroso, PX …)" },
+        "cask_number": { "description": "Numéro de fût" },
+        "finish": { "description": "Finition" },
+        "maturation_years": { "description": "Durée d'élevage en années" },
+        "batch": { "description": "Numéro de lot" },
+        "edition": { "description": "Édition" },
+        "bottle_number": { "description": "Numéro de bouteille (édition limitée)" },
+        "number_of_bottles": { "description": "Nombre total de bouteilles produites" },
+        "limited_edition": { "description": "Édition limitée" },
+        "independent_bottler": { "description": "Embouteillage indépendant (hors distillerie d'origine)" },
+        "tasting_notes": { "description": "Notes de dégustation générales" },
+        "nose_notes": { "description": "Nez" },
+        "palate_notes": { "description": "Bouche" },
+        "finish_notes": { "description": "Finale" },
+        "whiskybase_id": { "description": "ID Whiskybase (facultatif, jamais interrogé automatiquement)" },
+        "whiskybase_url": { "description": "Lien Whiskybase (facultatif, jamais interrogé automatiquement)" },
+        "image_url": { "description": "URL de la photo" },
+        "label_image_url": { "description": "URL de la photo de l'étiquette" },
+        "price": { "description": "Prix d'achat" },
+        "current_value": { "description": "Valeur estimée actuelle" },
+        "currency": { "description": "Devise (par défaut EUR)" },
+        "purchase_date": { "description": "Date d'achat (AAAA-MM-JJ)" },
+        "purchase_location": { "description": "Lieu d'achat" },
+        "storage_location": { "description": "Lieu de rangement libre (en plus de l'emplacement d'étagère)" },
+        "notes": { "description": "Notes personnelles" },
+        "favorite": { "description": "Coup de cœur" },
+        "rating": { "description": "Note personnelle /5" },
+        "barcode": { "description": "Code-barres" },
+        "external_id": { "description": "ID externe (autre base de données)" },
+        "external_url": { "description": "Lien externe" }
+      }
+    },
+    "update_whisky": {
+      "name": "Modifier le whisky",
+      "description": "Modifie les informations d'une fiche de whisky existante (mêmes champs que add_whisky, sans emplacement).",
+      "fields": {
+        "whisky_id": { "description": "ID du whisky" },
+        "name": { "description": "Nouveau nom" },
+        "distillery": { "description": "Distillerie" },
+        "bottler": { "description": "Embouteilleur indépendant" },
+        "brand": { "description": "Marque commerciale" },
+        "expression": { "description": "Expression / embouteillage" },
+        "country": { "description": "Pays" },
+        "region": { "description": "Région" },
+        "whisky_type": { "description": "Type de whisky" },
+        "age": { "description": "Âge" },
+        "abv": { "description": "Titre alcoométrique" },
+        "cask_type": { "description": "Type de fût" },
+        "finish": { "description": "Finition" },
+        "tasting_notes": { "description": "Notes de dégustation" },
+        "price": { "description": "Prix d'achat" },
+        "current_value": { "description": "Valeur estimée actuelle" },
+        "favorite": { "description": "Coup de cœur" },
+        "rating": { "description": "Note personnelle /5" }
+      }
+    },
+    "remove_whisky": {
+      "name": "Supprimer le whisky",
+      "description": "Supprime une fiche de whisky et TOUS ses exemplaires de la collection.",
+      "fields": {
+        "whisky_id": { "description": "ID du whisky" }
+      }
+    },
+    "add_slot": {
+      "name": "Ajouter un exemplaire",
+      "description": "Ajoute une bouteille physique supplémentaire à un whisky existant.",
+      "fields": {
+        "whisky_id": { "description": "ID du whisky" },
+        "rack_id": { "description": "ID de l'étagère" },
+        "slot": { "description": "Numéro d'emplacement" },
+        "comment": { "description": "Commentaire libre pour cet exemplaire" },
+        "size": { "description": "Format de bouteille" }
+      }
+    },
+    "update_slot": {
+      "name": "Modifier l'exemplaire",
+      "description": "Change le format ou le commentaire d'une bouteille physique.",
+      "fields": {
+        "whisky_id": { "description": "ID du whisky" },
+        "slot_idx": { "description": "Index de l'exemplaire dans la liste des emplacements" },
+        "size": { "description": "Format de bouteille" },
+        "comment": { "description": "Commentaire libre" }
+      }
+    },
+    "move_slot": {
+      "name": "Déplacer l'exemplaire",
+      "description": "Déplace une bouteille physique vers une autre étagère / un autre emplacement.",
+      "fields": {
+        "whisky_id": { "description": "ID du whisky" },
+        "slot_idx": { "description": "Index de l'exemplaire à déplacer" },
+        "rack_id": { "description": "ID de l'étagère cible" },
+        "slot": { "description": "Numéro d'emplacement cible" }
+      }
+    },
+    "remove_slot": {
+      "name": "Supprimer l'exemplaire",
+      "description": "Supprime UN exemplaire sans changer son statut (pas un service de consommation — utilisez open_bottle/finish_bottle pour cela). Le whisky est supprimé automatiquement avec lui s'il s'agissait de son dernier exemplaire.",
+      "fields": {
+        "whisky_id": { "description": "ID du whisky" },
+        "slot_idx": { "description": "Index de l'exemplaire à supprimer" }
+      }
+    },
+    "open_bottle": {
+      "name": "Ouvrir la bouteille",
+      "description": "Marque un exemplaire comme ouvert (sealed → opened). Déclenche l'événement whiskydb_bottle_opened.",
+      "fields": {
+        "whisky_id": { "description": "ID du whisky" },
+        "slot_idx": { "description": "Index de l'exemplaire (par défaut 0)" },
+        "opened_date": { "description": "Date d'ouverture (AAAA-MM-JJ, par défaut aujourd'hui)" }
+      }
+    },
+    "finish_bottle": {
+      "name": "Terminer la bouteille",
+      "description": "Marque un exemplaire comme terminé (opened → finished). L'emplacement N'EST PAS supprimé : la fiche reste consultable avec son historique. Déclenche l'événement whiskydb_bottle_finished.",
+      "fields": {
+        "whisky_id": { "description": "ID du whisky" },
+        "slot_idx": { "description": "Index de l'exemplaire (par défaut 0)" },
+        "finished_date": { "description": "Date de fin (AAAA-MM-JJ, par défaut aujourd'hui)" },
+        "rating": { "description": "Note personnelle /5 pour ce whisky" },
+        "comment": { "description": "Commentaire de dégustation pour cet exemplaire" }
+      }
+    },
+    "update_remaining": {
+      "name": "Mettre à jour le niveau",
+      "description": "Met à jour le niveau (%) d'un exemplaire OUVERT (suivi manuel, p. ex. pesée ou estimation visuelle). Déclenche l'événement whiskydb_bottle_low UNIQUEMENT au premier franchissement du seuil (pas à chaque appel) et est utilisable directement comme déclencheur d'automatisation.",
+      "fields": {
+        "whisky_id": { "description": "ID du whisky" },
+        "slot_idx": { "description": "Index de l'exemplaire (par défaut 0)" },
+        "remaining_percent": { "description": "Niveau, 0 à 100" },
+        "low_threshold": { "description": "Seuil sous lequel whiskydb_bottle_low se déclenche (par défaut 20)" }
+      }
+    },
+    "add_tasting": {
+      "name": "Ajouter une dégustation (hors collection)",
+      "description": "Ajoute une entrée au journal de dégustation pour un whisky simplement DÉGUSTÉ (chez des amis, au bar, à une dégustation) sans jamais avoir possédé de bouteille. N'a AUCUN effet sur la collection (whiskies, étagères, capteurs) : ces entrées vivent dans une liste séparée et apparaissent dans l'onglet « 🥂 » de la carte avec les bouteilles terminées. Déclenche l'événement whiskydb_tasting_added.",
+      "fields": {
+        "name": { "description": "Nom du whisky dégusté" },
+        "distillery": { "description": "Distillerie" },
+        "whisky_type": { "description": "Type : Single Malt, Blended Malt, Blended Whisky, Single Grain, Bourbon, Rye, Tennessee Whiskey, Corn Whiskey, Irish Single Malt, Irish Pot Still, Japanese Whisky, World Whisky, Autre" },
+        "region": { "description": "Région" },
+        "country": { "description": "Pays" },
+        "place": { "description": "Lieu de dégustation (ex. « Chez Marc », « Bar Le Malt »)" },
+        "tasted_date": { "description": "Date de dégustation (AAAA-MM-JJ, par défaut aujourd'hui)" },
+        "rating": { "description": "Note personnelle /5" },
+        "comment": { "description": "Commentaire de dégustation" }
+      }
+    },
+    "remove_tasting": {
+      "name": "Supprimer la dégustation (hors collection)",
+      "description": "Supprime une entrée du journal de dégustation.",
+      "fields": {
+        "tasting_id": { "description": "ID de l'entrée de dégustation" }
+      }
+    }
+  }
+}

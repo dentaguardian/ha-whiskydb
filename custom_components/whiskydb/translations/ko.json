@@ -1,0 +1,290 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WhiskyDB — 컬렉션",
+        "description": "환영합니다! 여기에서 위스키 컬렉션을 설정하세요.",
+        "data": {
+          "collection_name": "컬렉션 이름",
+          "ai_api_key": "API 키 (선택)",
+          "ai_base_url": "AI 엔드포인트 (선택)"
+        },
+        "data_description": {
+          "ai_api_key": "console.mistral.ai(“API Keys” 섹션)에서 무료 키를 받으세요. 키가 없으면: 수동 입력만 가능하며 라벨 인식이 되지 않습니다.",
+          "ai_base_url": "기본값: https://api.mistral.ai/v1 (Mistral). 대안: Ollama (http://localhost:11434/v1), LM Studio 또는 OpenRouter."
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "형식이 잘못되었습니다 — API 키에 공백이 포함될 수 없으며 20자 이상이어야 합니다"
+    },
+    "abort": {
+      "already_configured": "WhiskyDB가 이미 설정되어 있습니다."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "WhiskyDB 설정",
+        "description": "API 키 또는 AI 엔드포인트를 업데이트합니다.",
+        "data": {
+          "ai_api_key": "API 키",
+          "ai_base_url": "AI 엔드포인트"
+        },
+        "data_description": {
+          "ai_api_key": "console.mistral.ai에서 새 키를 만드세요. 수동 입력만 사용하려면 비워 두세요.",
+          "ai_base_url": "기본값: https://api.mistral.ai/v1 (Mistral). 로컬 모델은 예: http://localhost:11434/v1 (Ollama)."
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "형식이 잘못되었습니다 — API 키에 공백이 포함될 수 없으며 20자 이상이어야 합니다"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "whiskydb_total": { "name": "WhiskyDB 총 병수" },
+      "whiskydb_opened": { "name": "WhiskyDB 개봉됨" },
+      "whiskydb_sealed": { "name": "WhiskyDB 미개봉" },
+      "whiskydb_finished": { "name": "WhiskyDB 다 마심" },
+      "whiskydb_distilleries": { "name": "WhiskyDB 증류소" },
+      "whiskydb_collection_value": { "name": "WhiskyDB 컬렉션 가치" },
+      "whiskydb_average_age": { "name": "WhiskyDB 평균 숙성 연수" }
+    }
+  },
+  "services": {
+    "add_rack": {
+      "name": "렉 추가",
+      "description": "컬렉션 내에 보관 랙을 추가합니다.",
+      "fields": {
+        "cellar_id": { "description": "컬렉션 ID (선택, 기본값: 첫 번째)" },
+        "name": { "description": "렉 이름" },
+        "columns": { "description": "열 수" },
+        "shelves": { "description": "선반 수" },
+        "levels": { "description": "쌓는 단 수 (1~4)" }
+      }
+    },
+    "update_rack": {
+      "name": "렉 편집",
+      "description": "기존 랙을 편집합니다.",
+      "fields": {
+        "rack_id": { "description": "렉 ID" },
+        "name": { "description": "새 이름" },
+        "columns": { "description": "열 수" },
+        "shelves": { "description": "선반 수" },
+        "levels": { "description": "쌓는 단 수 (1~4)" }
+      }
+    },
+    "remove_rack": {
+      "name": "렉 삭제",
+      "description": "랙을 삭제합니다. 안에 있던 병은 보관 위치를 잃지만 컬렉션에는 남습니다.",
+      "fields": {
+        "rack_id": { "description": "렉 ID" }
+      }
+    },
+    "add_cellar": {
+      "name": "컬렉션 추가",
+      "description": "인스턴스에 새로운 빈 컬렉션(캐비닛)을 만듭니다.",
+      "fields": {
+        "name": { "description": "컬렉션 이름" }
+      }
+    },
+    "rename_cellar": {
+      "name": "컬렉션 이름 바꾸기",
+      "description": "컬렉션 이름을 바꿉니다 (cellar_id를 생략하면 첫 번째 컬렉션).",
+      "fields": {
+        "cellar_id": { "description": "컬렉션 ID (선택)" },
+        "name": { "description": "새 이름" }
+      }
+    },
+    "remove_cellar": {
+      "name": "컬렉션 삭제",
+      "description": "빈 컬렉션을 삭제합니다 (렉이 있거나 마지막 컬렉션이면 거부됩니다).",
+      "fields": {
+        "cellar_id": { "description": "컬렉션 ID" }
+      }
+    },
+    "add_whisky": {
+      "name": "위스키 추가",
+      "description": "컬렉션에 위스키 항목을 추가합니다. 첫 보관 위치는 선택입니다.",
+      "fields": {
+        "name": { "description": "항목 이름 (예: \"Lagavulin 16 Years Old\")" },
+        "rack_id": { "description": "대상 렉 ID (선택 — 렉이 없으면 보관 위치 없이 `quantity`병이 생성됩니다)" },
+        "slot": { "description": "렉 안의 슬롯 번호 (rack_id를 지정한 경우에만)" },
+        "quantity": { "description": "rack_id를 생략할 때 생성할 병 수 (기본값 1)" },
+        "initial_status": { "description": "생성되는 병의 초기 상태: sealed(미개봉), opened(개봉됨), finished(다 마심) (기본값 sealed)" },
+        "distillery": { "description": "증류소" },
+        "bottler": { "description": "독립 병입자 (증류소와 다른 경우)" },
+        "brand": { "description": "상표 브랜드" },
+        "expression": { "description": "표현 / 병입 (예: \"16 Year Old\")" },
+        "country": { "description": "국가" },
+        "region": { "description": "지역" },
+        "distillery_location": { "description": "증류소의 정확한 위치" },
+        "whisky_type": { "description": "종류: 싱글몰트, 블렌디드 몰트, 블렌디드 위스키, 싱글 그레인, 버번, 라이, 테네시 위스키, 콘 위스키, 아이리시 싱글몰트, 아이리시 포트 스틸, 재패니즈 위스키, 월드 위스키, 기타" },
+        "age": { "description": "숙성 연수 (년)" },
+        "vintage": { "description": "증류 연도" },
+        "bottling_year": { "description": "병입 연도" },
+        "abv": { "description": "알코올 도수 (% vol)" },
+        "volume_ml": { "description": "용량 (밀리리터)" },
+        "chill_filtered": { "description": "비냉각 여과 = false" },
+        "natural_colour": { "description": "천연 색소 (무착색) = true" },
+        "peated": { "description": "피티드 (이탄)" },
+        "peat_level": { "description": "피트 강도 (예: 약함, 중간, 강함)" },
+        "ppm": { "description": "페놀 함량 ppm (알 경우)" },
+        "maturation": { "description": "숙성 요약" },
+        "cask_type": { "description": "오크통 종류 (예: First Fill Bourbon, Oloroso, PX …)" },
+        "cask_number": { "description": "오크통 번호" },
+        "finish": { "description": "피니시" },
+        "maturation_years": { "description": "숙성 기간 (년)" },
+        "batch": { "description": "배치 번호" },
+        "edition": { "description": "에디션" },
+        "bottle_number": { "description": "병 번호 (한정판)" },
+        "number_of_bottles": { "description": "생산 총 병수" },
+        "limited_edition": { "description": "한정판" },
+        "independent_bottler": { "description": "독립 병입 (원 증류소 외부)" },
+        "tasting_notes": { "description": "전체 테이스팅 노트" },
+        "nose_notes": { "description": "향 (노즈)" },
+        "palate_notes": { "description": "맛 (팔레트)" },
+        "finish_notes": { "description": "여운 (피니시)" },
+        "whiskybase_id": { "description": "Whiskybase ID (선택, 자동 조회 안 함)" },
+        "whiskybase_url": { "description": "Whiskybase 링크 (선택, 자동 조회 안 함)" },
+        "image_url": { "description": "사진 URL" },
+        "label_image_url": { "description": "라벨 사진 URL" },
+        "price": { "description": "구매 가격" },
+        "current_value": { "description": "현재 추정 가치" },
+        "currency": { "description": "통화 (기본값 EUR)" },
+        "purchase_date": { "description": "구매 날짜 (YYYY-MM-DD)" },
+        "purchase_location": { "description": "구매 장소" },
+        "storage_location": { "description": "자유 입력 보관 위치 (렉 슬롯 외에 추가로)" },
+        "notes": { "description": "개인 메모" },
+        "favorite": { "description": "즐겨찾기" },
+        "rating": { "description": "개인 평점 /5" },
+        "barcode": { "description": "바코드" },
+        "external_id": { "description": "외부 ID (다른 데이터베이스)" },
+        "external_url": { "description": "외부 링크" }
+      }
+    },
+    "update_whisky": {
+      "name": "위스키 편집",
+      "description": "기존 위스키 항목의 정보를 편집합니다 (add_whisky와 같은 필드, 보관 위치 제외).",
+      "fields": {
+        "whisky_id": { "description": "위스키 ID" },
+        "name": { "description": "새 이름" },
+        "distillery": { "description": "증류소" },
+        "bottler": { "description": "독립 병입자" },
+        "brand": { "description": "상표 브랜드" },
+        "expression": { "description": "표현 / 병입" },
+        "country": { "description": "국가" },
+        "region": { "description": "지역" },
+        "whisky_type": { "description": "위스키 종류" },
+        "age": { "description": "숙성 연수" },
+        "abv": { "description": "알코올 도수" },
+        "cask_type": { "description": "오크통 종류" },
+        "finish": { "description": "피니시" },
+        "tasting_notes": { "description": "테이스팅 노트" },
+        "price": { "description": "구매 가격" },
+        "current_value": { "description": "현재 추정 가치" },
+        "favorite": { "description": "즐겨찾기" },
+        "rating": { "description": "개인 평점 /5" }
+      }
+    },
+    "remove_whisky": {
+      "name": "위스키 제거",
+      "description": "위스키 항목과 해당 병 모두를 컬렉션에서 제거합니다.",
+      "fields": {
+        "whisky_id": { "description": "위스키 ID" }
+      }
+    },
+    "add_slot": {
+      "name": "병 추가",
+      "description": "기존 위스키에 다른 실제 병을 추가합니다.",
+      "fields": {
+        "whisky_id": { "description": "위스키 ID" },
+        "rack_id": { "description": "렉 ID" },
+        "slot": { "description": "슬롯 번호" },
+        "comment": { "description": "이 병에 대한 자유 메모" },
+        "size": { "description": "병 형식" }
+      }
+    },
+    "update_slot": {
+      "name": "병 편집",
+      "description": "실제 병의 형식 또는 메모를 변경합니다.",
+      "fields": {
+        "whisky_id": { "description": "위스키 ID" },
+        "slot_idx": { "description": "보관 슬롯 목록에서 병의 인덱스" },
+        "size": { "description": "병 형식" },
+        "comment": { "description": "자유 메모" }
+      }
+    },
+    "move_slot": {
+      "name": "병 이동",
+      "description": "실제 병을 다른 렉 / 슬롯으로 이동합니다.",
+      "fields": {
+        "whisky_id": { "description": "위스키 ID" },
+        "slot_idx": { "description": "이동할 병의 인덱스" },
+        "rack_id": { "description": "대상 렉 ID" },
+        "slot": { "description": "대상 슬롯 번호" }
+      }
+    },
+    "remove_slot": {
+      "name": "병 제거",
+      "description": "상태를 변경하지 않고 병 한 개를 제거합니다 (소비 서비스가 아님 — 이에는 open_bottle/finish_bottle을 사용하세요). 이 병이 마지막이었다면 위스키도 자동으로 함께 삭제됩니다.",
+      "fields": {
+        "whisky_id": { "description": "위스키 ID" },
+        "slot_idx": { "description": "제거할 병의 인덱스" }
+      }
+    },
+    "open_bottle": {
+      "name": "병 개봉",
+      "description": "병을 개봉됨으로 표시합니다 (sealed → opened). whiskydb_bottle_opened 이벤트를 발생시킵니다.",
+      "fields": {
+        "whisky_id": { "description": "위스키 ID" },
+        "slot_idx": { "description": "병의 인덱스 (기본값 0)" },
+        "opened_date": { "description": "개봉 날짜 (YYYY-MM-DD, 기본값 오늘)" }
+      }
+    },
+    "finish_bottle": {
+      "name": "병 다 마심",
+      "description": "병을 다 마심으로 표시합니다 (opened → finished). 보관 슬롯은 삭제되지 않습니다: 기록과 이력이 계속 조회됩니다. whiskydb_bottle_finished 이벤트를 발생시킵니다.",
+      "fields": {
+        "whisky_id": { "description": "위스키 ID" },
+        "slot_idx": { "description": "병의 인덱스 (기본값 0)" },
+        "finished_date": { "description": "종료 날짜 (YYYY-MM-DD, 기본값 오늘)" },
+        "rating": { "description": "이 위스키에 대한 개인 평점 /5" },
+        "comment": { "description": "이 병에 대한 테이스팅 메모" }
+      }
+    },
+    "update_remaining": {
+      "name": "잔량 업데이트",
+      "description": "개봉된 병의 잔량(%)을 업데이트합니다 (수동 추적, 예: 무게 측정 또는 눈짐작). whiskydb_bottle_low 이벤트는 임계값을 처음으로 밑돌 때만 발생합니다 (매번이 아니라) 자동화 트리거로 바로 사용할 수 있습니다.",
+      "fields": {
+        "whisky_id": { "description": "위스키 ID" },
+        "slot_idx": { "description": "병의 인덱스 (기본값 0)" },
+        "remaining_percent": { "description": "잔량, 0~100" },
+        "low_threshold": { "description": "이 값 미만이면 whiskydb_bottle_low 발생 (기본값 20)" }
+      }
+    },
+    "add_tasting": {
+      "name": "테이스팅 추가 (컬렉션 외)",
+      "description": "병을 소유한 적 없이 단지 맛만 본 위스키(친구 집, 바, 시음회 등)를 테이스팅 일지에 추가합니다. 컬렉션(위스키, 렉, 센서)에는 영향을 주지 않습니다: 이 항목은 별도 목록에 저장되며 카드의 \"🥂\" 탭에 다 마신 병과 함께 표시됩니다. whiskydb_tasting_added 이벤트를 발생시킵니다.",
+      "fields": {
+        "name": { "description": "시음한 위스키 이름" },
+        "distillery": { "description": "증류소" },
+        "whisky_type": { "description": "종류: 싱글몰트, 블렌디드 몰트, 블렌디드 위스키, 싱글 그레인, 버번, 라이, 테네시 위스키, 콘 위스키, 아이리시 싱글몰트, 아이리시 포트 스틸, 재패니즈 위스키, 월드 위스키, 기타" },
+        "region": { "description": "지역" },
+        "country": { "description": "국가" },
+        "place": { "description": "시음 장소 (예: \"마르크네 집\", \"Le Malt 바\")" },
+        "tasted_date": { "description": "시음 날짜 (YYYY-MM-DD, 기본값 오늘)" },
+        "rating": { "description": "개인 평점 /5" },
+        "comment": { "description": "테이스팅 메모" }
+      }
+    },
+    "remove_tasting": {
+      "name": "테이스팅 삭제 (컬렉션 외)",
+      "description": "테이스팅 일지에서 항목을 삭제합니다.",
+      "fields": {
+        "tasting_id": { "description": "시음 항목 ID" }
+      }
+    }
+  }
+}

@@ -16,7 +16,7 @@ Siehe [LICENSE](LICENSE) — alle ursprünglichen Urheber bleiben genannt.
 
 | | ha-whisky (Original) | WhiskyDB (dieser Fork) |
 |---|---|---|
-| Oberfläche (Integration + Karte) | Französisch | **Komplett Deutsch** |
+| Oberfläche (Integration + Karte) | Französisch | **12 Sprachen** — Deutsch als Quellsprache, folgt automatisch der HA-Sprache |
 | KI-Backend | Google Gemini (nur Gemini-Key) | **OpenAI-kompatibel** — Standard Mistral, konfigurierbarer Endpunkt (Ollama, LM Studio, OpenRouter …) |
 | Domain / Entitäten | `whisky` | `whiskydb` (`sensor.whiskydb_total`, …) |
 | Daten-Datei | `whisky_data.json` | `whiskydb_data.json` |
@@ -77,8 +77,9 @@ Sprache, die in Home Assistant unter *Einstellungen → Allgemein → Sprache* g
 
 ## Sprachen
 
-WhiskyDB spricht 12 Sprachen — Konfigurationsdialog, Sensornamen und alle 18 Services
-richten sich automatisch nach deiner Home-Assistant-Sprache:
+WhiskyDB spricht 12 Sprachen — Konfigurationsdialog, Sensornamen, alle 18 Services
+und (seit v2.1.1) die komplette Lovelace-Karte richten sich automatisch nach
+deiner Home-Assistant-Sprache:
 
 | Sprache | Datei | Sprache | Datei |
 |---|---|---|---|
@@ -101,6 +102,17 @@ type: custom:whisky-card
 ```
 
 Oder im UI-Editor: Karte hinzufügen → **Benutzerdefiniert: Whisky Card**.
+
+**Kartensprache umstellen** (optional):
+
+```yaml
+type: custom:whisky-card
+language: auto   # Standard: folgt der HA-Sprache — oder direkt: de, en, fr, es,
+                 # it, nl, pl, pt-BR, ja, ko, zh-Hans, zh-Hant
+```
+
+Die Karte nutzt automatisch die Home-Assistant-Sprache (`auto`); unbekannte
+Sprachen fallen auf Englisch zurück, fehlende Texte auf Englisch bzw. Deutsch.
 
 ## Services
 
